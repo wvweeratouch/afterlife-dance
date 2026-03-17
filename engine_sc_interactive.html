@@ -521,42 +521,54 @@ function runMP(){
 }
 
 // ============================================================
-// RAW WEB AUDIO DRUMS — CEING style
+// RAW WEB AUDIO DRUMS — CEING style + echo delay
 // ============================================================
-let plxCtx=null;
+let plxCtx=null, plxDelay=null, plxDryGain=null;
 function getPlxCtx(){
-  if(!plxCtx&&sonic)plxCtx=sonic.audioContext||new AudioContext();
+  if(!plxCtx&&sonic){
+    plxCtx=sonic.audioContext||new AudioContext();
+    // Echo delay chain: dry + wet (feedback delay)
+    plxDryGain=plxCtx.createGain();plxDryGain.gain.value=1.0;
+    plxDryGain.connect(plxCtx.destination);
+    const dly=plxCtx.createDelay(1.0);dly.delayTime.value=0.12; // 120ms echo
+    const fb=plxCtx.createGain();fb.gain.value=0.35; // feedback amount
+    const wet=plxCtx.createGain();wet.gain.value=0.3; // wet mix
+    plxDryGain.connect(dly);dly.connect(fb);fb.connect(dly); // feedback loop
+    dly.connect(wet);wet.connect(plxCtx.destination);
+    plxDelay=plxDryGain; // all drums route here
+  }
   return plxCtx;
 }
+function plxOut(){return plxDelay||getPlxCtx()&&plxDelay}
 function plxKick(v){
-  const ctx=getPlxCtx();if(!ctx)return;const t=ctx.currentTime;
+  const ctx=getPlxCtx(),out=plxOut();if(!ctx||!out)return;const t=ctx.currentTime;
   const o=ctx.createOscillator(),g=ctx.createGain();
   o.type='sine';o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+0.12);
   g.gain.setValueAtTime(Math.min(v*0.7,0.8)*volScale,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
-  o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.35);
+  o.connect(g);g.connect(out);o.start(t);o.stop(t+0.35);
 }
 function plxSnare(v){
-  const ctx=getPlxCtx();if(!ctx)return;const t=ctx.currentTime;
+  const ctx=getPlxCtx(),out=plxOut();if(!ctx||!out)return;const t=ctx.currentTime;
   const b=ctx.createBuffer(1,ctx.sampleRate*0.12,ctx.sampleRate);
   const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   const s=ctx.createBufferSource();s.buffer=b;
   const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=3000;
   const ng=ctx.createGain();ng.gain.setValueAtTime(Math.min(v*0.35,0.4)*volScale,t);ng.gain.exponentialRampToValueAtTime(0.001,t+0.12);
-  s.connect(f);f.connect(ng);ng.connect(ctx.destination);
+  s.connect(f);f.connect(ng);ng.connect(out);
   const o=ctx.createOscillator(),og=ctx.createGain();
   o.type='sine';o.frequency.setValueAtTime(200,t);o.frequency.exponentialRampToValueAtTime(80,t+0.05);
   og.gain.setValueAtTime(Math.min(v*0.45,0.5)*volScale,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.1);
-  o.connect(og);og.connect(ctx.destination);
+  o.connect(og);og.connect(out);
   s.start(t);s.stop(t+0.15);o.start(t);o.stop(t+0.12);
 }
 function plxHiHat(v){
-  const ctx=getPlxCtx();if(!ctx)return;const t=ctx.currentTime;
+  const ctx=getPlxCtx(),out=plxOut();if(!ctx||!out)return;const t=ctx.currentTime;
   const b=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate);
   const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   const s=ctx.createBufferSource();s.buffer=b;
   const f=ctx.createBiquadFilter();f.type='highpass';f.frequency.value=7000;
   const g=ctx.createGain();g.gain.setValueAtTime(Math.min(v*0.35,0.5)*volScale,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
-  s.connect(f);f.connect(g);g.connect(ctx.destination);s.start(t);s.stop(t+0.08);
+  s.connect(f);f.connect(g);g.connect(out);s.start(t);s.stop(t+0.08);
 }
 
 // ============================================================
@@ -586,10 +598,10 @@ function trigPlexus60fps(){
   const v=Math.min(speedNorm*1.2,1);
 
   if(curScene===4){
-    // Machinegun: more layers, tighter thresholds
-    if(poseVel<0.015){plxKick(v);}
-    else if(poseVel<0.03){plxSnare(v);if(Math.random()<0.3)plxKick(v*0.3);}
-    else{plxHiHat(v);plxSnare(v*0.5);if(Math.random()<0.25)plxKick(v*0.2);}
+    // CEING machinegun: kick ALWAYS plays with snare, hi-hat layers on top
+    plxKick(v*0.6);  // kick on every hit
+    plxSnare(v);      // snare on every hit
+    if(poseVel>0.03)plxHiHat(v*0.7); // hi-hat adds at high velocity
   }else{
     const s=SC[curScene],scale=SCALES[curScene];
     if(s.intSynth&&scale&&scale.length){
@@ -682,8 +694,14 @@ function startPadChords(){
     }else if(curScene===4){
       pci=nextChordIdx(pci,chords.length);
       const ch4=chords[pci%chords.length];
-      ch4.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*15));
-      setT('pad',tick,1000+Math.random()*1500);
+      // Epic half-note cluster: detune notes randomly ±1-2 semitones (keyboard smash)
+      ch4.forEach((n,i)=>{
+        const detune=n+Math.round(Math.random()*4-2); // ±2 semitones off
+        setTimeout(()=>playBg(s.padSynth,detune,s.release*1.5,{amp:s.padAmp*1.3,attack:s.attack,cutoff:s.cutoff+Math.random()*20,release:s.release*1.5}),i*8);
+      });
+      // Half note timing at 138bpm = ~217ms
+      const halfNote=60000/s.bpm/2;
+      setT('pad',tick,halfNote*(0.9+Math.random()*0.2));
     }else if(curScene===5){
       pci=nextChordIdx(pci,chords.length);const ch5=chords[pci%chords.length];
       const nc=2+Math.floor(Math.random()*Math.min(3,ch5.length));
