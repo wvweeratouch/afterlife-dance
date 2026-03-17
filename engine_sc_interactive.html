@@ -128,6 +128,7 @@ const G={thresh:80,sens:50,dark:false,dbg:true,mpOn:false,autoMel:true,poseThres
 let bodyDetected=false, lastBodyTime=0;
 const BODY_TIMEOUT=3000;
 const mirrorCh=typeof BroadcastChannel!=='undefined'?new BroadcastChannel('afterlife'):null;
+let lastMirror=0;
 
 // ============================================================
 // SUPERSONIC
@@ -1152,8 +1153,10 @@ function draw(now){
   if(started){
     if(visMode==='mandala')renderMandala();
     else renderConstellation(now);
-    // Broadcast pose data to mirror page(s)
-    if(poses.length>0&&mirrorCh)mirrorCh.postMessage({poses,visMode,color:SC[curScene]?.color||'#448'});
+    // Broadcast pose data to mirror page(s) — throttled to 30fps, plain objects only
+    if(poses.length>0&&mirrorCh&&now-lastMirror>33){lastMirror=now;
+      try{const plain=poses.map(p=>p.map(lm=>({x:lm.x,y:lm.y,visibility:lm.visibility})));
+      mirrorCh.postMessage({poses:plain,visMode,color:SC[curScene]?.color||'#448'});}catch(e){}}
   }
 
   // FPS

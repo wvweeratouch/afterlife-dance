@@ -3,6 +3,7 @@
 Interactive sound + body detection engine for **Emergence: The After Party** (York Manor, LA — Mar 28, 2026).
 
 **Live demo**: https://wvweeratouch.github.io/afterlife-dance/
+**Mirror (projector)**: https://wvweeratouch.github.io/afterlife-dance/mirror.html
 
 ## What Is This
 
@@ -47,9 +48,8 @@ No install needed. Open in Chrome, allow camera, move.
 - **Vol** — master volume
 - **BG** — background layer volume
 - **MelA / MelB** — two melody lines, independently DJ-able
-- **BPM** — override beats per minute
-- **Density** — note density multiplier
-- **Trans** — scene transition crossfade time (500ms–8s)
+- **BPM** — override beats per minute (number input)
+- **Trans** — scene transition crossfade time (0.5–3s)
 
 ### Detection
 - **Thresh** — blob detection threshold
@@ -58,12 +58,18 @@ No install needed. Open in Chrome, allow camera, move.
 - **Auto-Mel** — toggle auto-generated melody
 - **Pose** — toggle MediaPipe body tracking
 - **PoseT** — pose velocity dead zone (0.01–0.20)
+- **Persons** — number of people to track (1–3)
+- **Mandala/Constellation** — toggle visual mode
 
 ### Keyboard
 - `0-6` — switch scene
 - `P` — toggle pose
 - `A` — toggle auto-melody
-- `D` — toggle debug
+- `V` — toggle visual mode (Mandala / Constellation)
+
+### Mirror Display (for projector)
+
+Open [mirror.html](https://wvweeratouch.github.io/afterlife-dance/mirror.html) in a second tab/screen. It receives pose data from the engine via BroadcastChannel and renders the same visual fullscreen. Click to go fullscreen. No sound, no controls — pure visual output.
 
 ## Detection
 
