@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Afterlife Dance — Mirror</title>
+<style>
+*{margin:0;padding:0}
+body{background:#030308;overflow:hidden;cursor:none}
+canvas{width:100vw;height:100vh;display:block}
+#status{position:fixed;top:8px;right:12px;color:#333;font:11px monospace;z-index:2}
+</style>
+</head><body>
+<canvas id="vis"></canvas>
+<span id="status">waiting for engine...</span>
+<script>
+const cv=document.getElementById('vis'),cx=cv.getContext('2d');
+let W,H;
+function rz(){W=cv.width=innerWidth;H=cv.height=innerHeight;
+  mandalaC.width=W;mandalaC.height=H;
+  mandalaCx.fillStyle='#0a0805';mandalaCx.fillRect(0,0,W,H);
+}
+
+// Mandala offscreen buffer
+const mandalaC=document.createElement('canvas');mandalaC.width=960;mandalaC.height=540;
+const mandalaCx=mandalaC.getContext('2d');
+mandalaCx.fillStyle='#0a0805';mandalaCx.fillRect(0,0,960,540);
+
+const BODY_CONNECTIONS=[
+  [11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],
+  [23,25],[25,27],[24,26],[26,28],[15,17],[15,19],[15,21],
+  [16,18],[16,20],[16,22],[27,29],[27,31],[28,30],[28,32]
+];
+const DOT_COLOR='#d4af37';
+
+// State from engine
+let poses=[], visMode='mandala', sceneColor='#448';
+let constellations=[], lastConst=0;
+
+// BroadcastChannel — receive from engine
+const ch=new BroadcastChannel('afterlife');
+ch.onmessage=e=>{
+  poses=e.data.poses||[];
+  visMode=e.data.visMode||'mandala';
+  sceneColor=e.data.color||'#448';
+  document.getElementById('status').textContent=poses.length+'p '+visMode;
+};
+
+// ============================================================
+// MANDALA
+// ============================================================
+function renderMandala(){
+  mandalaCx.fillStyle='rgba(10,8,5,0.03)';
+  mandalaCx.fillRect(0,0,mandalaC.width,mandalaC.height);
+  const cxM=mandalaC.width/2,cyM=mandalaC.height/2,folds=8;
+
+  for(let di=0;di<poses.length;di++){
+    const pose=poses[di];if(!pose)continue;
+    const KEY_LM=[0,11,12,15,16,23,24,27,28];
+    let conf=0,cnt=0;
+    KEY_LM.forEach(i=>{if(pose[i]&&pose[i].visibility!=null){conf+=pose[i].visibility;cnt++}});
+    conf=cnt>0?conf/cnt:0.5;
+    const dotA=Math.round(140*conf).toString(16).padStart(2,'0');
+    const lineA=Math.round(30*conf).toString(16).padStart(2,'0');
+
+    for(let f=0;f<folds;f++){
+      const ang=(f/folds)*Math.PI*2,mir=f%2===0?1:-1;
+      mandalaCx.save();
+      mandalaCx.translate(cxM,cyM);mandalaCx.rotate(ang);mandalaCx.scale(mir,1);mandalaCx.translate(-cxM,-cyM);
+
+      pose.forEach((lm,i)=>{
+        if((lm.visibility||0)<0.4)return;
+        mandalaCx.beginPath();mandalaCx.arc(lm.x*mandalaC.width,lm.y*mandalaC.height,3,0,Math.PI*2);
+        mandalaCx.fillStyle=DOT_COLOR+dotA;mandalaCx.fill();
+      });
+
+      BODY_CONNECTIONS.forEach(([a,b])=>{
+        const la=pose[a],lb=pose[b];
+        if(!la||!lb||(la.visibility||0)<0.3||(lb.visibility||0)<0.3)return;
+        mandalaCx.beginPath();
+        mandalaCx.moveTo(la.x*mandalaC.width,la.y*mandalaC.height);
+        mandalaCx.lineTo(lb.x*mandalaC.width,lb.y*mandalaC.height);
+        mandalaCx.strokeStyle=DOT_COLOR+lineA;mandalaCx.lineWidth=0.5;mandalaCx.stroke();
+      });
+      mandalaCx.restore();
+    }
+  }
+  cx.drawImage(mandalaC,0,0,W,H);
+}
+
+// ============================================================
+// CONSTELLATION
+// ============================================================
+function buildConstellation(){
+  const pts=[];
+  for(let di=0;di<poses.length;di++){
+    const pose=poses[di];if(!pose)continue;
+    pose.forEach((lm,i)=>{if((lm.visibility||0)<0.4)return;pts.push({x:lm.x,y:lm.y});});
+  }
+  if(pts.length<3)return null;
+  const n=Math.min(pts.length,8+Math.floor(Math.random()*13));
+  const shuffled=[...pts].sort(()=>Math.random()-0.5).slice(0,n);
+  const lines=[];
+  for(let i=0;i<shuffled.length;i++){
+    const dists=shuffled.map((p,j)=>({j,d:j===i?Infinity:Math.sqrt((p.x-shuffled[i].x)**2+(p.y-shuffled[i].y)**2)}));
+    dists.sort((a,b)=>a.d-b.d);
+    const nc=1+Math.floor(Math.random()*3);
+    for(let c=0;c<Math.min(nc,dists.length);c++){
+      if(dists[c].d<0.4){
+        const key=Math.min(i,dists[c].j)+'-'+Math.max(i,dists[c].j);
+        if(!lines.find(l=>l.key===key))lines.push({a:i,b:dists[c].j,key});
+      }
+    }
+  }
+  return{points:shuffled,lines,birthTime:performance.now(),holdTime:1000+Math.random()*2000,fadeTime:500+Math.random()*500};
+}
+
+function renderConstellation(now){
+  cx.fillStyle='rgba(3,3,8,0.15)';cx.fillRect(0,0,W,H);
+  const active=constellations.filter(c=>now-c.birthTime<c.holdTime).length;
+  if(active===0&&now-lastConst>300&&poses.length>0){
+    const c=buildConstellation();if(c){constellations.push(c);lastConst=now;}
+  }
+  const keep=[];
+  for(const c of constellations){
+    const age=now-c.birthTime,total=c.holdTime+c.fadeTime;
+    if(age>total)continue;keep.push(c);
+    let alpha=1;if(age>c.holdTime)alpha=1-(age-c.holdTime)/c.fadeTime;
+    const ah=Math.round(alpha*180).toString(16).padStart(2,'0');
+    const ahL=Math.round(alpha*120).toString(16).padStart(2,'0');
+    c.lines.forEach(l=>{
+      const pa=c.points[l.a],pb=c.points[l.b];
+      cx.beginPath();cx.moveTo(pa.x*W,pa.y*H);cx.lineTo(pb.x*W,pb.y*H);
+      cx.strokeStyle='#d4af37'+ahL;cx.lineWidth=0.8;cx.stroke();
+    });
+    c.points.forEach(p=>{
+      cx.beginPath();cx.arc(p.x*W,p.y*H,2.5,0,Math.PI*2);
+      cx.fillStyle='#d4af37'+ah;cx.fill();
+    });
+  }
+  constellations=keep;
+}
+
+// ============================================================
+// DRAW LOOP
+// ============================================================
+function draw(now){
+  requestAnimationFrame(draw);
+  if(visMode==='mandala')renderMandala();
+  else renderConstellation(now);
+}
+rz();onresize=rz;
+requestAnimationFrame(draw);
+
+// Fullscreen on click
+document.addEventListener('click',()=>{document.documentElement.requestFullscreen().catch(()=>{});});
+</script>
+</body></html>
