@@ -10,16 +10,6 @@ A browser-based performance system where **body movement drives generative music
 
 No install needed. Open in Chrome, allow camera, move.
 
-## Engines
-
-| File | What | Tech |
-|------|------|------|
-| `engine_sc_interactive.html` | **Main** — camera + pose + sound | SuperCollider WASM + MediaPipe |
-| `engine_sc.html` | Sound only (no camera) | SuperCollider WASM |
-| `engine_khaen.html` | Khaen + Pin generative music | Tone.js |
-| `engine.html` | Legacy full engine | Tone.js + Camera |
-| `engine_flat.html` | Legacy sound only | Tone.js |
-
 ## Quick Start
 
 1. Open [the live demo](https://wvweeratouch.github.io/afterlife-dance/) or serve locally:
@@ -94,5 +84,4 @@ No install needed. Open in Chrome, allow camera, move.
 
 - [SuperCollider WASM](https://www.npmjs.com/package/supersonic-scsynth) (supersonic-scsynth)
 - [MediaPipe Pose](https://google.github.io/mediapipe/solutions/pose.html)
-- [Tone.js](https://tonejs.github.io/) (legacy engines)
 - Pure HTML/JS, no build step, no dependencies to install
