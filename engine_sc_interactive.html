@@ -3,27 +3,27 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:flex;flex-direction:column}
-#bar{padding:5px 10px;background:#0a0a12;border-bottom:1px solid #1a1a2a;display:flex;gap:6px;align-items:center;font-size:10px;z-index:5;flex-wrap:wrap}
-#bar2{padding:4px 10px;background:#08081a;border-bottom:1px solid #1a1a2a;display:flex;gap:6px;align-items:center;font-size:10px;z-index:5;flex-wrap:wrap}
-#bar label,#bar2 label{color:#446;font-size:8px}
-#bar input[type=range],#bar2 input[type=range]{width:50px;height:3px;-webkit-appearance:none;background:#222;border:none;border-radius:2px}
-#bar input[type=range]::-webkit-slider-thumb,#bar2 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:#668;border-radius:50%;cursor:pointer}
-#bar input[type=number],#bar2 input[type=number],#bar select,#bar2 select{width:44px;background:#111;border:1px solid #333;color:#aaa;padding:1px 3px;font-size:9px;border-radius:2px;font-family:monospace}
-#bar select,#bar2 select{width:36px}
-.sb{padding:2px 6px;border:1px solid #333;border-radius:3px;background:#111;color:#888;cursor:pointer;font-size:10px;font-family:monospace}
+#bar{padding:8px 14px;background:#0a0a12;border-bottom:1px solid #1a1a2a;display:flex;gap:10px;align-items:center;font-size:13px;z-index:5;flex-wrap:wrap}
+#bar2{padding:6px 14px;background:#08081a;border-bottom:1px solid #1a1a2a;display:flex;gap:10px;align-items:center;font-size:13px;z-index:5;flex-wrap:wrap}
+#bar label,#bar2 label{color:#446;font-size:11px}
+#bar input[type=range],#bar2 input[type=range]{width:70px;height:5px;-webkit-appearance:none;background:#222;border:none;border-radius:3px}
+#bar input[type=range]::-webkit-slider-thumb,#bar2 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:#668;border-radius:50%;cursor:pointer}
+#bar input[type=number],#bar2 input[type=number],#bar select,#bar2 select{width:50px;background:#111;border:1px solid #333;color:#aaa;padding:3px 5px;font-size:12px;border-radius:3px;font-family:monospace}
+#bar select,#bar2 select{width:42px}
+.sb{padding:4px 10px;border:1px solid #333;border-radius:4px;background:#111;color:#888;cursor:pointer;font-size:13px;font-family:monospace}
 .sb.on{background:#224;color:#8af;border-color:#448}
-.btn{padding:2px 6px;border:1px solid #444;border-radius:3px;background:#1a1a2a;color:#888;cursor:pointer;font-size:9px}
+.btn{padding:4px 10px;border:1px solid #444;border-radius:4px;background:#1a1a2a;color:#888;cursor:pointer;font-size:12px}
 .btn.on{background:#224;color:#8af;border-color:#448}
-#scene-name{color:#8af;font-weight:bold;min-width:80px;font-size:10px}
+#scene-name{color:#8af;font-weight:bold;min-width:80px;font-size:13px}
 #energy-bar{width:50px;height:6px;background:#111;border-radius:3px;overflow:hidden}
 #energy-fill{height:100%;border-radius:3px;transition:width 3s,background 3s}
 #log{position:absolute;bottom:8px;left:12px;color:#335;font-size:10px;max-width:400px;font-family:monospace}
 #info{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#446;font-size:16px;cursor:pointer;z-index:5;text-align:center}
 #info.hide{display:none}
-.badge{display:inline-block;padding:1px 5px;background:#1a1a2e;border:1px solid #333;border-radius:3px;color:#668;font-size:8px;margin-left:4px}
+.badge{display:inline-block;padding:2px 8px;background:#1a1a2e;border:1px solid #333;border-radius:3px;color:#668;font-size:11px;margin-left:4px}
 .ctrl{display:flex;align-items:center;gap:2px}
-.ctrl span{color:#556;font-size:8px;min-width:16px;text-align:right}
-.det{color:#446;font-size:9px}
+.ctrl span{color:#556;font-size:11px;min-width:20px;text-align:right}
+.det{color:#446;font-size:11px}
 .m{height:3px;background:#1a1a1a;border-radius:2px;width:40px}
 .mf{height:100%;border-radius:2px}
 /* Split layout: monitor left, main screen right */
@@ -64,7 +64,9 @@ body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:fl
   <span class="btn on" id="btnAuto" onclick="window._toggleAuto()">Auto-Mel ON</span>
   <span class="btn" id="btnDark" onclick="window._toggleDark()">Dark</span>
   <span class="btn" id="btnPose" onclick="window._togglePose()">Pose</span>
+  <span class="btn on" id="btnVis" onclick="window._toggleVis()">Mandala</span>
   <div class="ctrl"><label>PoseT</label><input type="range" min="1" max="20" value="5" id="poseTCtrl"><span id="vPoseT">0.05</span></div>
+  <div class="ctrl"><label>Trans</label><input type="range" min="500" max="3000" value="1000" step="100" id="transCtrl"><span id="vTrans">1s</span></div>
   <div class="ctrl"><label>Persons</label><select id="numPoses"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select></div>
   <span style="color:#222">|</span>
   <span class="det">Blobs:<span id="nB">0</span> Vel:<span id="nVv">0</span> Pose:<span id="nP">off</span> FPS:<span id="nF">0</span></span>
@@ -134,6 +136,7 @@ import { SuperSonic } from "https://unpkg.com/supersonic-scsynth@latest";
 let sonic=null, started=false, curScene=0, nodeId=1000;
 let volScale=0.8, bgScale=0.5, melAScale=0.7, melBScale=0.7, melScale=0.7, bpmOverride=null;
 let autoMelScale=1.0;
+let transitionTime=1000;
 
 async function init(){
   log('Initializing SuperCollider WASM...');
@@ -265,7 +268,7 @@ const SC=[
   {name:'Binary',nameT:'หิง-ขวัญ',energy:6,color:'#44aa88',det:'blob',
    padSynth:'sonic-pi-dull_bell',melSynth:'sonic-pi-pluck',melBSynth:'sonic-pi-pretty_bell',
    mel2Synth:'sonic-pi-pretty_bell',bassSynth:'sonic-pi-bass_foundation',arpSynth:'sonic-pi-pluck',
-   bpm:100,padAmp:0.32,melAmp:0.35,melBAmp:0.12,mel2Amp:0.14,bassAmp:0.12,
+   bpm:100,padAmp:0.32,melAmp:0.7,melBAmp:0.24,mel2Amp:0.28,bassAmp:0.12,
    sparkleP:0.15,kick:true,kickRate:1800,release:2.5,attack:0.5,cutoff:90,
    breathRate:0.22,breathAmp:0.18,fxType:'bird',
    intSynth:'sonic-pi-pluck',intAmp:0.2},
@@ -289,7 +292,7 @@ const SC=[
   {name:'Collapse',nameT:'ส่งขวัญขึ้นฟ้า',energy:3,color:'#884488',det:'blob',
    padSynth:'sonic-pi-pretty_bell',melSynth:'sonic-pi-piano',melBSynth:'sonic-pi-rhodey',
    mel2Synth:null,bassSynth:'sonic-pi-beep',arpSynth:null,
-   bpm:80,padAmp:0.25,melAmp:0.25,melBAmp:0.15,mel2Amp:0,bassAmp:0.08,
+   bpm:80,padAmp:0.25,melAmp:0.5,melBAmp:0.3,mel2Amp:0,bassAmp:0.08,
    sparkleP:0.1,kick:false,kickRate:0,release:6,attack:2,cutoff:90,
    breathRate:0.1,breathAmp:0.22,fxType:'ocean-space',
    intSynth:'sonic-pi-piano',intAmp:0.15},
@@ -383,11 +386,13 @@ async function startCam(){try{
 }catch(e){log('No camera: '+e.message);}}
 
 function calibrate(){
-  if(!video||!video.videoWidth)return;
+  if(!video||!video.videoWidth){log('No camera — cannot calibrate');return;}
   oX.drawImage(video,0,0,80,60);
   bgFrame=oX.getImageData(0,0,80,60);
   log('Calibrated — background captured');
-  $('btnCal').textContent='Recalibrate';
+  const btn=$('btnCal');
+  btn.textContent='Calibrated!';btn.style.background='#142';btn.style.color='#4f4';btn.style.borderColor='#4f4';
+  setTimeout(()=>{btn.textContent='Recalibrate';btn.style.background='';btn.style.color='';btn.style.borderColor='';},1500);
 }
 window._calibrate=calibrate;
 
@@ -566,22 +571,25 @@ function trigPlexus60fps(){
   let mx=0;
   poseVels.forEach(v=>{if(v>mx)mx=v;});
 
-  poseVel=poseVel*0.8+mx*0.2;
+  poseVel=poseVel*0.7+mx*0.3; // less smoothing = more responsive
 
   const velThresh=G.poseThresh;
   if(poseVel<velThresh)return;
 
-  const speedNorm=Math.min((poseVel-velThresh)/0.06,1);
-  const retrigger=200-(200-40)*speedNorm;
+  const speedNorm=Math.min((poseVel-velThresh)/0.04,1); // reaches max faster
+  // Scene 4: machinegun (15ms floor), others: melodic (40ms floor)
+  const minRetrig=curScene===4?15:40;
+  const retrigger=150-(150-minRetrig)*speedNorm;
   if(now-lastPlx<retrigger)return;
   lastPlx=now;
 
   const v=Math.min(speedNorm*1.2,1);
 
   if(curScene===4){
-    if(poseVel<0.02){plxKick(v);}
-    else if(poseVel<0.045){plxSnare(v);}
-    else{plxHiHat(v);if(Math.random()<0.4)plxSnare(v*0.4);}
+    // Machinegun: more layers, tighter thresholds
+    if(poseVel<0.015){plxKick(v);}
+    else if(poseVel<0.03){plxSnare(v);if(Math.random()<0.3)plxKick(v*0.3);}
+    else{plxHiHat(v);plxSnare(v*0.5);if(Math.random()<0.25)plxKick(v*0.2);}
   }else{
     const s=SC[curScene],scale=SCALES[curScene];
     if(s.intSynth&&scale&&scale.length){
@@ -838,19 +846,34 @@ function startFormlessHat(){
 
 function startAllLoops(){
   clearAll();
-  startPadChords();startBass();startMelody();startMelodyB();startMel2();
-  startArp();startSparkle();startKick();startFormless();startSoundFX();
+  startPadChords();startMelody();startMelodyB();startMel2();
+  startArp();startSparkle();startFormless();startSoundFX();
   startBellRain();startFormlessHat();
 }
 
 // ============================================================
-// SCENE SWITCH — clean, no ramp (BG stays consistent)
+// SCENE SWITCH — smooth BG crossfade
 // ============================================================
+let transRafId=null;
 function setScene(n){
-  if(!started)return;curScene=n;ci=0;
+  if(!started)return;
+  const targetBg=+$('bgVol').value/100;
+  const startBg=bgScale;
+  curScene=n;ci=0;
   const s=SC[n],scale=SCALES[n];
   if(scale.length){mP=Math.min(mP,scale.length-1);m2P=Math.min(m2P,scale.length-1);mBP=Math.min(mBP,scale.length-1);}
   if(!bpmOverride){$('bpmCtrl').value=s.bpm;}
+  // Crossfade: ramp from current→0→target over transitionTime
+  if(transRafId)cancelAnimationFrame(transRafId);
+  const tStart=performance.now(),tHalf=transitionTime/2;
+  function rampBg(now){
+    const elapsed=now-tStart;
+    if(elapsed<tHalf){bgScale=startBg*(1-elapsed/tHalf);}
+    else if(elapsed<transitionTime){bgScale=targetBg*((elapsed-tHalf)/tHalf);}
+    else{bgScale=targetBg;return;}
+    transRafId=requestAnimationFrame(rampBg);
+  }
+  transRafId=requestAnimationFrame(rampBg);
   startAllLoops();
   $('scene-name').textContent='#'+n+' '+s.name;
   const pct=s.energy*10;
@@ -872,11 +895,20 @@ $('bgVol').oninput=function(){bgScale=this.value/100;$('vBg').textContent=this.v
 $('melAVol').oninput=function(){melAScale=this.value/100;$('vMelA').textContent=this.value;volChanged();};
 $('melBVol').oninput=function(){melBScale=this.value/100;$('vMelB').textContent=this.value;volChanged();};
 $('bpmCtrl').oninput=function(){bpmOverride=+this.value||null;};
+$('transCtrl').oninput=function(){transitionTime=+this.value;$('vTrans').textContent=(this.value/1000).toFixed(1)+'s';};
 $('threshCtrl').oninput=function(){G.thresh=+this.value;$('vThr').textContent=this.value;};
 $('sensCtrl').oninput=function(){G.sens=+this.value;$('vSens').textContent=this.value;};
 window._toggleAuto=function(){G.autoMel=!G.autoMel;Z('btnAuto');$('btnAuto').textContent=G.autoMel?'Auto-Mel ON':'Auto-Mel OFF';};
 window._toggleDark=function(){G.dark=!G.dark;Z('btnDark');};
 window._togglePose=function(){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!poseLandmarker)loadMP();};
+window._toggleVis=function(){
+  visMode=visMode==='mandala'?'constellation':'mandala';
+  $('btnVis').textContent=visMode==='mandala'?'Mandala':'Constellation';
+  // Clear both canvases on switch
+  mandalaCx.fillStyle='#0a0805';mandalaCx.fillRect(0,0,mandalaC.width,mandalaC.height);
+  mvx.fillStyle='#030308';mvx.fillRect(0,0,MW,MH);
+  constellations=[];
+};
 $('poseTCtrl').oninput=function(){G.poseThresh=this.value/100;$('vPoseT').textContent=G.poseThresh.toFixed(2);};
 $('numPoses').onchange=function(){
   G.numPoses=+this.value;
@@ -888,29 +920,32 @@ document.addEventListener('keydown',e=>{
   const n=parseInt(e.key);if(n>=0&&n<=6)setScene(n);
   if(e.key==='p'||e.key==='P'){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!poseLandmarker)loadMP();}
   if(e.key==='a'||e.key==='A')window._toggleAuto();
+  if(e.key==='v'||e.key==='V')window._toggleVis();
 });
 
 // ============================================================
-// MANDALA RENDERING — 8-fold rotational symmetry from pose
+// VISUAL MODE: Mandala or Constellation
 // ============================================================
+let visMode='mandala'; // 'mandala' or 'constellation'
+const MANDALA_DOT_COLOR='#d4af37'; // single warm gold for all persons
+
 function renderMandala(){
-  // Fade trail
   mandalaCx.fillStyle='rgba(10,8,5,0.03)';
   mandalaCx.fillRect(0,0,mandalaC.width,mandalaC.height);
 
   const cxM=mandalaC.width/2, cyM=mandalaC.height/2;
   const folds=8;
 
+  // All persons treated as one body — same color
   for(let di=0;di<poses.length;di++){
     const pose=poses[di];
     if(!pose)continue;
-    const colors=MANDALA_COLORS[di%MANDALA_COLORS.length];
-    // Confidence from avg visibility of key landmarks
     const KEY_LM=[0,11,12,15,16,23,24,27,28];
     let conf=0,cnt=0;
     KEY_LM.forEach(i=>{if(pose[i]&&pose[i].visibility!=null){conf+=pose[i].visibility;cnt++}});
     conf=cnt>0?conf/cnt:0.5;
-    const ah=Math.round(96*conf).toString(16).padStart(2,'0');
+    const dotAlpha=Math.round(140*conf).toString(16).padStart(2,'0');
+    const lineAlpha=Math.round(30*conf).toString(16).padStart(2,'0');
 
     for(let f=0;f<folds;f++){
       const ang=(f/folds)*Math.PI*2;
@@ -921,24 +956,24 @@ function renderMandala(){
       mandalaCx.scale(mir,1);
       mandalaCx.translate(-cxM,-cyM);
 
-      // Draw landmark dots
+      // Dots — bigger, brighter
       pose.forEach((lm,i)=>{
         if((lm.visibility||0)<0.4)return;
         mandalaCx.beginPath();
-        mandalaCx.arc(lm.x*mandalaC.width,lm.y*mandalaC.height,2,0,Math.PI*2);
-        mandalaCx.fillStyle=colors[i%4]+ah;
+        mandalaCx.arc(lm.x*mandalaC.width,lm.y*mandalaC.height,3,0,Math.PI*2);
+        mandalaCx.fillStyle=MANDALA_DOT_COLOR+dotAlpha;
         mandalaCx.fill();
       });
 
-      // Draw body connections
+      // Lines — very low opacity
       BODY_CONNECTIONS.forEach(([a,b])=>{
         const la=pose[a],lb=pose[b];
         if(!la||!lb||(la.visibility||0)<0.3||(lb.visibility||0)<0.3)return;
         mandalaCx.beginPath();
         mandalaCx.moveTo(la.x*mandalaC.width,la.y*mandalaC.height);
         mandalaCx.lineTo(lb.x*mandalaC.width,lb.y*mandalaC.height);
-        mandalaCx.strokeStyle=colors[0]+ah;
-        mandalaCx.lineWidth=1;
+        mandalaCx.strokeStyle=MANDALA_DOT_COLOR+lineAlpha;
+        mandalaCx.lineWidth=0.5;
         mandalaCx.stroke();
       });
 
@@ -946,8 +981,100 @@ function renderMandala(){
     }
   }
 
-  // Copy to main screen
   mvx.drawImage(mandalaC,0,0,MW,MH);
+}
+
+// ============================================================
+// CONSTELLATION VISUAL — random plexus connections, hold then fade
+// ============================================================
+let constellations=[]; // {points[], lines[], birthTime, holdTime, fadeTime, alpha}
+
+function buildConstellation(){
+  // Collect all visible landmarks from all persons
+  const pts=[];
+  for(let di=0;di<poses.length;di++){
+    const pose=poses[di];if(!pose)continue;
+    pose.forEach((lm,i)=>{
+      if((lm.visibility||0)<0.4)return;
+      pts.push({x:lm.x,y:lm.y});
+    });
+  }
+  if(pts.length<3)return null;
+
+  // Pick random subset of points (8-20)
+  const n=Math.min(pts.length, 8+Math.floor(Math.random()*13));
+  const shuffled=[...pts].sort(()=>Math.random()-0.5).slice(0,n);
+
+  // Create random connections (plexus style — connect nearby points)
+  const lines=[];
+  for(let i=0;i<shuffled.length;i++){
+    // Connect to 1-3 nearest neighbors
+    const dists=shuffled.map((p,j)=>({j,d:j===i?Infinity:Math.sqrt((p.x-shuffled[i].x)**2+(p.y-shuffled[i].y)**2)}));
+    dists.sort((a,b)=>a.d-b.d);
+    const numConn=1+Math.floor(Math.random()*3);
+    for(let c=0;c<Math.min(numConn,dists.length);c++){
+      if(dists[c].d<0.4){
+        const key=Math.min(i,dists[c].j)+'-'+Math.max(i,dists[c].j);
+        if(!lines.find(l=>l.key===key))lines.push({a:i,b:dists[c].j,key});
+      }
+    }
+  }
+
+  return{
+    points:shuffled,
+    lines,
+    birthTime:performance.now(),
+    holdTime:1000+Math.random()*2000, // 1-3s hold
+    fadeTime:500+Math.random()*500,    // 0.5-1s fade
+  };
+}
+
+let lastConst=0;
+function renderConstellation(now){
+  mvx.fillStyle='rgba(3,3,8,0.15)';
+  mvx.fillRect(0,0,MW,MH);
+
+  // Spawn new constellation when previous ones are fading
+  const activeCount=constellations.filter(c=>now-c.birthTime<c.holdTime).length;
+  if(activeCount===0&&now-lastConst>300&&poses.length>0){
+    const c=buildConstellation();
+    if(c){constellations.push(c);lastConst=now;}
+  }
+
+  // Draw + cleanup
+  const keep=[];
+  for(const c of constellations){
+    const age=now-c.birthTime;
+    const totalLife=c.holdTime+c.fadeTime;
+    if(age>totalLife)continue; // expired
+    keep.push(c);
+
+    let alpha=1;
+    if(age>c.holdTime){alpha=1-(age-c.holdTime)/c.fadeTime;}
+
+    const ah=Math.round(alpha*180).toString(16).padStart(2,'0');
+    const ahLine=Math.round(alpha*120).toString(16).padStart(2,'0');
+
+    // Draw lines first
+    c.lines.forEach(l=>{
+      const pa=c.points[l.a],pb=c.points[l.b];
+      mvx.beginPath();
+      mvx.moveTo(pa.x*MW,pa.y*MH);
+      mvx.lineTo(pb.x*MW,pb.y*MH);
+      mvx.strokeStyle='#d4af37'+ahLine;
+      mvx.lineWidth=0.8;
+      mvx.stroke();
+    });
+
+    // Draw dots
+    c.points.forEach(p=>{
+      mvx.beginPath();
+      mvx.arc(p.x*MW,p.y*MH,2.5,0,Math.PI*2);
+      mvx.fillStyle='#d4af37'+ah;
+      mvx.fill();
+    });
+  }
+  constellations=keep;
 }
 
 // ============================================================
@@ -1002,8 +1129,11 @@ function draw(now){
   cx.fillStyle='#446';cx.font='9px monospace';
   cx.fillText('#'+curScene+' '+SC[curScene].name+' | '+getBpm()+'bpm | poses:'+poses.length+' poseVel:'+poseVel.toFixed(3),4,H-4);
 
-  // Main screen: mandala visual
-  if(started)renderMandala();
+  // Main screen visual
+  if(started){
+    if(visMode==='mandala')renderMandala();
+    else renderConstellation(now);
+  }
 
   // FPS
   fN++;if(now-fT>1000){$('nF').textContent=fN;fN=0;fT=now;}
