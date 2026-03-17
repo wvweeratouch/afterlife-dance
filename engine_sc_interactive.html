@@ -864,10 +864,13 @@ window._setScene=setScene;
 // ============================================================
 // CONTROLS
 // ============================================================
-$('vol').oninput=function(){volScale=this.value/100;$('vVol').textContent=this.value;};
-$('bgVol').oninput=function(){bgScale=this.value/100;$('vBg').textContent=this.value;};
-$('melAVol').oninput=function(){melAScale=this.value/100;$('vMelA').textContent=this.value;};
-$('melBVol').oninput=function(){melBScale=this.value/100;$('vMelB').textContent=this.value;};
+// Debounced loop restart — new notes pick up new volume within 300ms
+let _volDebounce=null;
+function volChanged(){clearTimeout(_volDebounce);_volDebounce=setTimeout(()=>{if(started)startAllLoops();},300);}
+$('vol').oninput=function(){volScale=this.value/100;$('vVol').textContent=this.value;volChanged();};
+$('bgVol').oninput=function(){bgScale=this.value/100;$('vBg').textContent=this.value;volChanged();};
+$('melAVol').oninput=function(){melAScale=this.value/100;$('vMelA').textContent=this.value;volChanged();};
+$('melBVol').oninput=function(){melBScale=this.value/100;$('vMelB').textContent=this.value;volChanged();};
 $('bpmCtrl').oninput=function(){bpmOverride=+this.value||null;};
 $('threshCtrl').oninput=function(){G.thresh=+this.value;$('vThr').textContent=this.value;};
 $('sensCtrl').oninput=function(){G.sens=+this.value;$('vSens').textContent=this.value;};
