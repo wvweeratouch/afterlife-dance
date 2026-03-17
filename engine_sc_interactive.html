@@ -185,7 +185,7 @@ function nid(){return nodeId++}
 function play(synth,note,dur,p={}){
   if(!sonic||!started)return;
   const id=nid();
-  const amp=(p.amp||0.3)*volScale*synthGain(synth);
+  const amp=(p.amp!=null?p.amp:0.3)*volScale*synthGain(synth);
   const args=['note',note,'sustain',dur,'amp',amp];
   if(p.cutoff)args.push('cutoff',p.cutoff);
   if(p.release!=null)args.push('release',p.release);
@@ -194,26 +194,26 @@ function play(synth,note,dur,p={}){
   if(p.res)args.push('res',p.res);
   sonic.send('/s_new',synth,id,0,0,...args);
 }
-function playBg(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*bgScale});}
-function playMelA(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale});}
-function playMelB(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melBScale});}
-function playMel(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale});}
+function playBg(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp!=null?p.amp:0.3)*bgScale});}
+function playMelA(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp!=null?p.amp:0.3)*melScale*melAScale});}
+function playMelB(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp!=null?p.amp:0.3)*melScale*melBScale});}
+function playMel(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp!=null?p.amp:0.3)*melScale});}
 // Auto-melody: scaled by autoMelScale, routed through melA
 function playAutoMel(synth,note,dur,p={}){
   if(!G.autoMel&&!bodyDetected)return;
   const sc=bodyDetected?Math.max(0.15,1-autoMelScale):autoMelScale;
-  play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale*sc});
+  play(synth,note,dur,{...p,amp:(p.amp!=null?p.amp:0.3)*melScale*melAScale*sc});
 }
 // Auto-melody B line: routed through melB
 function playAutoMelB(synth,note,dur,p={}){
   if(!G.autoMel&&!bodyDetected)return;
   const sc=bodyDetected?Math.max(0.15,1-autoMelScale):autoMelScale;
-  play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melBScale*sc});
+  play(synth,note,dur,{...p,amp:(p.amp!=null?p.amp:0.3)*melScale*melBScale*sc});
 }
 // Interactive melody: when body detected or pose on
 function playInterMel(synth,note,dur,p={}){
   if(!bodyDetected&&!G.mpOn)return;
-  play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale});
+  play(synth,note,dur,{...p,amp:(p.amp!=null?p.amp:0.3)*melScale*melAScale});
 }
 function getBpm(){return bpmOverride||SC[curScene].bpm}
 function pick(a){return a[Math.floor(Math.random()*a.length)]}
