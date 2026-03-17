@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Afterlife Dance — SC Interactive v5</title>
+<html><head><meta charset="UTF-8"><title>Afterlife Dance — SC Interactive v6</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:flex;flex-direction:column}
@@ -8,6 +8,8 @@ body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:fl
 #bar label,#bar2 label{color:#446;font-size:8px}
 #bar input[type=range],#bar2 input[type=range]{width:50px;height:3px;-webkit-appearance:none;background:#222;border:none;border-radius:2px}
 #bar input[type=range]::-webkit-slider-thumb,#bar2 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:#668;border-radius:50%;cursor:pointer}
+#bar input[type=number],#bar2 input[type=number],#bar select,#bar2 select{width:44px;background:#111;border:1px solid #333;color:#aaa;padding:1px 3px;font-size:9px;border-radius:2px;font-family:monospace}
+#bar select,#bar2 select{width:36px}
 .sb{padding:2px 6px;border:1px solid #333;border-radius:3px;background:#111;color:#888;cursor:pointer;font-size:10px;font-family:monospace}
 .sb.on{background:#224;color:#8af;border-color:#448}
 .btn{padding:2px 6px;border:1px solid #444;border-radius:3px;background:#1a1a2a;color:#888;cursor:pointer;font-size:9px}
@@ -29,20 +31,19 @@ body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:fl
 #monitor{width:35%;min-width:280px;background:#080810;border-right:1px solid #1a1a2a;position:relative;display:flex;flex-direction:column}
 #monitor canvas{flex:1;width:100%}
 #mon-label{position:absolute;top:4px;left:6px;color:#334;font-size:9px;font-family:monospace;z-index:2}
-#main-screen{flex:1;background:#030308;position:relative;display:flex;align-items:center;justify-content:center}
-#main-label{position:absolute;top:4px;right:6px;color:#223;font-size:9px;font-family:monospace}
-#main-border{border:1px dashed #1a1a2a;width:90%;height:90%;display:flex;align-items:center;justify-content:center;color:#1a1a2a;font-size:14px;font-family:monospace}
+#main-screen{flex:1;background:#030308;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#main-label{position:absolute;top:4px;right:6px;color:#223;font-size:9px;font-family:monospace;z-index:2}
+#mainVis{width:100%;height:100%}
 </style>
 </head><body>
 <!-- Row 1: Music controls -->
 <div id="bar">
-  <span style="color:#668;font-weight:bold;font-size:10px">SC</span><span class="badge">v5 interactive</span>
+  <span style="color:#668;font-weight:bold;font-size:10px">SC</span><span class="badge">v6</span>
   <div class="ctrl"><label>Vol</label><input type="range" min="0" max="100" value="80" id="vol"><span id="vVol">80</span></div>
   <div class="ctrl"><label>BG</label><input type="range" min="0" max="100" value="50" id="bgVol"><span id="vBg">50</span></div>
   <div class="ctrl"><label>MelA</label><input type="range" min="0" max="100" value="70" id="melAVol"><span id="vMelA">70</span></div>
   <div class="ctrl"><label>MelB</label><input type="range" min="0" max="100" value="70" id="melBVol"><span id="vMelB">70</span></div>
-  <div class="ctrl"><label>BPM</label><input type="range" min="40" max="180" value="72" id="bpmCtrl"><span id="vBpm">72</span></div>
-  <div class="ctrl"><label>Density</label><input type="range" min="0" max="100" value="50" id="densCtrl"><span id="vDens">50</span></div>
+  <div class="ctrl"><label>BPM</label><input type="number" min="40" max="200" value="72" id="bpmCtrl"></div>
   <span style="color:#222">|</span>
   <span class="sb" onclick="window._setScene(0)">0</span>
   <span class="sb" onclick="window._setScene(1)">1</span>
@@ -64,7 +65,7 @@ body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:fl
   <span class="btn" id="btnDark" onclick="window._toggleDark()">Dark</span>
   <span class="btn" id="btnPose" onclick="window._togglePose()">Pose</span>
   <div class="ctrl"><label>PoseT</label><input type="range" min="1" max="20" value="5" id="poseTCtrl"><span id="vPoseT">0.05</span></div>
-  <div class="ctrl"><label>Trans</label><input type="range" min="500" max="8000" value="2000" id="transCtrl" step="100"><span id="vTrans">2s</span></div>
+  <div class="ctrl"><label>Persons</label><select id="numPoses"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select></div>
   <span style="color:#222">|</span>
   <span class="det">Blobs:<span id="nB">0</span> Vel:<span id="nVv">0</span> Pose:<span id="nP">off</span> FPS:<span id="nF">0</span></span>
   <span style="color:#222">|</span>
@@ -79,25 +80,51 @@ body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:fl
   </div>
   <div id="main-screen">
     <span id="main-label">MAIN SCREEN</span>
-    <div id="main-border">#${0} — visual output here</div>
+    <canvas id="mainVis"></canvas>
   </div>
 </div>
-<div id="info">Click to start SC Interactive v5<br><span style="font-size:11px;color:#335">Camera + Body + SuperCollider WASM</span></div>
+<div id="info">Click to start SC Interactive v6<br><span style="font-size:11px;color:#335">Camera + Body + SuperCollider WASM + Mandala</span></div>
 <div id="log"></div>
 
 <script type="module">
 const cv=document.getElementById('c'),cx=cv.getContext('2d');
-let W,H;function rz(){const p=cv.parentElement;W=cv.width=p.offsetWidth;H=cv.height=p.offsetHeight-16}rz();onresize=rz;
+const mvc=document.getElementById('mainVis'),mvx=mvc.getContext('2d');
+let W,H,MW,MH;
+function rz(){
+  const p=cv.parentElement;W=cv.width=p.offsetWidth;H=cv.height=p.offsetHeight-16;
+  const mp=mvc.parentElement;MW=mvc.width=mp.offsetWidth;MH=mvc.height=mp.offsetHeight;
+  // Resize mandala buffer to match
+  mandalaC.width=MW;mandalaC.height=MH;
+  mandalaCx.fillStyle='#0a0805';mandalaCx.fillRect(0,0,MW,MH);
+}
 const $=id=>document.getElementById(id);
 const Z=(id,f)=>{const e=$(id);if(f!==undefined)e.classList.toggle('on',!!f);else e.classList.toggle('on')};
 const log=m=>{$('log').textContent=m;console.log(m)};
 
 // ============================================================
+// MANDALA OFFSCREEN CANVAS
+// ============================================================
+const mandalaC=document.createElement('canvas');mandalaC.width=960;mandalaC.height=540;
+const mandalaCx=mandalaC.getContext('2d');
+mandalaCx.fillStyle='#0a0805';mandalaCx.fillRect(0,0,960,540);
+
+const BODY_CONNECTIONS=[
+  [11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],
+  [23,25],[25,27],[24,26],[26,28],[15,17],[15,19],[15,21],
+  [16,18],[16,20],[16,22],[27,29],[27,31],[28,30],[28,32]
+];
+const MANDALA_COLORS=[
+  ['#d4af37','#c87533','#e8967a','#8b1a1a'], // warm golds
+  ['#00e5ff','#3b82f6','#8b5cf6','#1e40af'], // cool blues
+  ['#4ade80','#22d3ee','#a78bfa','#14b8a6'], // green-teal
+];
+
+// ============================================================
 // STATE
 // ============================================================
-const G={thresh:80,sens:50,dark:false,dbg:true,mpOn:false,autoMel:true,poseThresh:0.05};
+const G={thresh:80,sens:50,dark:false,dbg:true,mpOn:false,autoMel:true,poseThresh:0.05,numPoses:2};
 let bodyDetected=false, lastBodyTime=0;
-const BODY_TIMEOUT=3000; // ms before auto-melody fades back
+const BODY_TIMEOUT=3000;
 
 // ============================================================
 // SUPERSONIC
@@ -105,9 +132,8 @@ const BODY_TIMEOUT=3000; // ms before auto-melody fades back
 import { SuperSonic } from "https://unpkg.com/supersonic-scsynth@latest";
 
 let sonic=null, started=false, curScene=0, nodeId=1000;
-let volScale=0.8, bgScale=0.5, melAScale=0.7, melBScale=0.7, melScale=0.7, densityMod=1.0, bpmOverride=null;
-let autoMelScale=1.0; // fades between 0-1 based on body detection
-let transitionTime=2000; // ms for scene crossfade
+let volScale=0.8, bgScale=0.5, melAScale=0.7, melBScale=0.7, melScale=0.7, bpmOverride=null;
+let autoMelScale=1.0;
 
 async function init(){
   log('Initializing SuperCollider WASM...');
@@ -132,6 +158,7 @@ async function init(){
   log('SC ready. Starting camera...');
   started=true;
   $('info').classList.add('hide');
+  rz();
   // Auto-enable pose on init
   G.mpOn=true;Z('btnPose',true);loadMP();
   startCam();
@@ -171,7 +198,7 @@ function playBg(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*
 function playMelA(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale});}
 function playMelB(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melBScale});}
 function playMel(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale});}
-// Auto-melody: scaled by autoMelScale (fades when body detected), routed through melA
+// Auto-melody: scaled by autoMelScale, routed through melA
 function playAutoMel(synth,note,dur,p={}){
   if(!G.autoMel&&!bodyDetected)return;
   const sc=bodyDetected?Math.max(0.15,1-autoMelScale):autoMelScale;
@@ -183,7 +210,7 @@ function playAutoMelB(synth,note,dur,p={}){
   const sc=bodyDetected?Math.max(0.15,1-autoMelScale):autoMelScale;
   play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melBScale*sc});
 }
-// Interactive melody: only when body detected
+// Interactive melody: when body detected or pose on
 function playInterMel(synth,note,dur,p={}){
   if(!bodyDetected&&!G.mpOn)return;
   play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale});
@@ -200,8 +227,8 @@ const SCALES={
   2:[57,60,64,67,69,72,76],
   3:[],
   4:[57,60,62,64,67,69,72,74,76,79,81,84],
-  5:[57,58,60,61,64,65,69,70,72],  // Saba mid: A3 Bb3 C4 Db4 E4 F4 A4 Bb4 C5
-  6:[72,74,76,79,81,83,84,86,88,91],  // Brazilian Lydian b7
+  5:[57,58,60,61,64,65,69,70,72],
+  6:[72,74,76,79,81,83,84,86,88,91],
 };
 const BELLS=[72,74,76,79,81,84,86,88];
 
@@ -257,7 +284,7 @@ const SC=[
    bpm:138,padAmp:0.35,melAmp:0,melBAmp:0,mel2Amp:0,bassAmp:0.15,
    sparkleP:0,kick:true,kickRate:435,release:0.8,attack:0.05,cutoff:120,
    breathRate:0.3,breathAmp:0.08,fxType:'noise-burst',
-   intSynth:null,intAmp:0}, // plexus drums handled separately
+   intSynth:null,intAmp:0},
 
   {name:'Collapse',nameT:'ส่งขวัญขึ้นฟ้า',energy:3,color:'#884488',det:'blob',
    padSynth:'sonic-pi-pretty_bell',melSynth:'sonic-pi-piano',melBSynth:'sonic-pi-rhodey',
@@ -344,12 +371,12 @@ function melRhythm(scene,bpm){
 // CAMERA + BLOB DETECTION
 // ============================================================
 let video,blobs=[],prevBlobs=[],sVel=0;
-let bgFrame=null; // calibration background
+let bgFrame=null;
 const oC=document.createElement('canvas');oC.width=80;oC.height=60;
 const oX=oC.getContext('2d',{willReadFrequently:true});
 
 async function startCam(){try{
-  const st=await navigator.mediaDevices.getUserMedia({video:{width:320,height:240}});
+  const st=await navigator.mediaDevices.getUserMedia({video:{width:640,height:360}});
   video=document.createElement('video');video.srcObject=st;await video.play();
   setInterval(doDetect,200);
   log('Camera started.');
@@ -366,18 +393,17 @@ window._calibrate=calibrate;
 
 function doDetect(){
   if(!video||!video.videoWidth||!started)return;
-  // Always run MediaPipe when enabled (regardless of scene detection mode)
+  // Always run MediaPipe when enabled
   if(G.mpOn)runMP();
   const s=SC[curScene];
   if(s.det==='off'){blobs=[];prevBlobs=[];$('nB').textContent=0;return;}
   prevBlobs=[...blobs];
   oX.drawImage(video,0,0,80,60);
   const fd=oX.getImageData(0,0,80,60);
-  const sensScale=G.sens/50; // 0.02 to 2.0
+  const sensScale=G.sens/50;
   const pts=[];
 
   if(bgFrame){
-    // Calibrated mode: detect difference from background
     const bg=bgFrame.data;
     for(let y=0;y<60;y+=3)for(let x=0;x<80;x+=3){
       const i=(y*80+x)*4;
@@ -385,7 +411,6 @@ function doDetect(){
       if(diff>G.thresh*sensScale)pts.push({x:x/80,y:y/60,br:diff/765});
     }
   } else {
-    // Raw brightness mode (before calibration)
     const thr=G.dark?25+(100-G.sens)*0.3:G.thresh;
     for(let y=0;y<60;y+=3)for(let x=0;x<80;x+=3){
       const i=(y*80+x)*4;
@@ -424,32 +449,74 @@ function doDetect(){
 
   // Trigger interactive sounds
   trigInteractive();
-
-  // MediaPipe already called at top of doDetect
 }
 
 // ============================================================
-// MEDIAPIPE
+// MEDIAPIPE — tasks-vision PoseLandmarker (multi-person)
 // ============================================================
-let mpObj=null,pose=null,prevPose=null,poseH=[];
-async function loadMP(){if(mpObj)return;$('nP').textContent='loading...';try{
-  const s=document.createElement('script');
-  s.src='https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js';
-  s.crossOrigin='anonymous';document.head.appendChild(s);
-  await new Promise((r,j)=>{s.onload=r;s.onerror=j;});
-  mpObj=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}`});
-  mpObj.setOptions({modelComplexity:0,smoothLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
-  mpObj.onResults(r=>{
-    if(r.poseLandmarks){prevPose=pose;pose={lm:r.poseLandmarks,t:performance.now()};
-      poseH.push(pose);if(poseH.length>15)poseH.shift();$('nP').textContent='33pts';
-    }else{pose=null;$('nP').textContent='lost';}
-  });
-  $('nP').textContent='ready';
-}catch(e){$('nP').textContent='fail';}}
-async function runMP(){if(!mpObj||!video)return;try{await mpObj.send({image:video});}catch(e){}}
+let PoseLandmarker=null, FilesetResolver=null, poseLandmarker=null;
+let poses=[], prevPoses=[], poseVels=[];
+let lastMPTime=0;
+
+async function loadMP(){
+  $('nP').textContent='loading...';
+  try{
+    const vision=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm");
+    PoseLandmarker=vision.PoseLandmarker;
+    FilesetResolver=vision.FilesetResolver;
+    const fileset=await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+    );
+    poseLandmarker=await PoseLandmarker.createFromOptions(fileset,{
+      baseOptions:{
+        modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+        delegate:"GPU"
+      },
+      runningMode:"VIDEO",
+      numPoses:G.numPoses,
+      minPoseDetectionConfidence:0.5,
+      minTrackingConfidence:0.5,
+    });
+    $('nP').textContent='ready';
+    log('MediaPipe PoseLandmarker loaded ('+G.numPoses+' persons)');
+  }catch(e){$('nP').textContent='fail';console.error('MP load error:',e);}
+}
+
+function runMP(){
+  if(!poseLandmarker||!video||video.readyState<2)return;
+  const now=performance.now();
+  if(now<=lastMPTime)return;
+  lastMPTime=now;
+  try{
+    const results=poseLandmarker.detectForVideo(video,now);
+    prevPoses=[...poses];
+    poses=[];
+    if(results.landmarks&&results.landmarks.length>0){
+      poses=results.landmarks.slice(0,G.numPoses);
+      // Update body detection
+      bodyDetected=true;lastBodyTime=now;
+    }
+    $('nP').textContent=poses.length>0?poses.length+'p':'lost';
+
+    // Compute per-pose velocities
+    poseVels=[];
+    for(let di=0;di<poses.length;di++){
+      if(!prevPoses[di]){poseVels.push(0);continue;}
+      const js=[11,12,13,14,15,16,23,24,25,26,27,28];
+      let mx=0;
+      js.forEach(j=>{
+        if(!poses[di][j]||!prevPoses[di][j])return;
+        const c=poses[di][j],p=prevPoses[di][j];
+        const v=Math.sqrt((c.x-p.x)**2+(c.y-p.y)**2);
+        if(v>mx)mx=v;
+      });
+      poseVels.push(mx);
+    }
+  }catch(e){}
+}
 
 // ============================================================
-// RAW WEB AUDIO DRUMS — CEING style, bypasses SC for speed
+// RAW WEB AUDIO DRUMS — CEING style
 // ============================================================
 let plxCtx=null;
 function getPlxCtx(){
@@ -492,17 +559,12 @@ function plxHiHat(v){
 // ============================================================
 let lastPlx=0, poseVel=0;
 function trigPlexus60fps(){
-  if(!pose||!prevPose)return;
+  if(poses.length===0||prevPoses.length===0)return;
   const now=performance.now();
 
-  // Compute max joint velocity across key body joints
-  const js=[11,12,13,14,15,16,23,24,25,26,27,28];
+  // Use max velocity across all detected persons
   let mx=0;
-  js.forEach(j=>{
-    const c=pose.lm[j],p=prevPose.lm[j];
-    const v=Math.sqrt((c.x-p.x)**2+(c.y-p.y)**2);
-    if(v>mx)mx=v;
-  });
+  poseVels.forEach(v=>{if(v>mx)mx=v;});
 
   poseVel=poseVel*0.8+mx*0.2;
 
@@ -517,26 +579,20 @@ function trigPlexus60fps(){
   const v=Math.min(speedNorm*1.2,1);
 
   if(curScene===4){
-    // Scene 4: velocity → drum type
     if(poseVel<0.02){plxKick(v);}
     else if(poseVel<0.045){plxSnare(v);}
     else{plxHiHat(v);if(Math.random()<0.4)plxSnare(v*0.4);}
   }else{
-    // All other scenes: pose velocity → interactive melody
     const s=SC[curScene],scale=SCALES[curScene];
     if(s.intSynth&&scale&&scale.length){
       const note=scale[Math.floor(Math.random()*scale.length)];
       playInterMel(s.intSynth,note,0.8+v*1.5,{amp:(s.intAmp||0.15)*(0.4+v*0.6),release:1+v,pan:(Math.random()-0.5)*1.0});
     }
   }
-
-  // Visual at fastest joint position
-  const fj=pose.lm[js[0]];
-  spawnParticle(fj.x*W,fj.y*H,SC[curScene].color,2+v*12);
 }
 
 // ============================================================
-// INTERACTIVE TRIGGERS — body → sound (called from detection at 5fps)
+// INTERACTIVE TRIGGERS — body → sound (5fps)
 // ============================================================
 let lastB=0;
 function trigInteractive(){
@@ -547,18 +603,15 @@ function trigInteractive(){
   const sensScale=G.sens/50;
   let info='';
 
-  // ── Scene 1: bells on movement ──
   if(si===1&&bv>0.01*sensScale&&now-lastB>250/sensScale){lastB=now;
     const note=BELLS[Math.floor(b.y*(BELLS.length-1))];
     playInterMel(s.intSynth,note,1.5,{amp:s.intAmp*(0.5+bv*5),release:1.5,pan:(b.x-0.5)*1.5});
-    // Multi-blob bells
     for(let i=1;i<Math.min(blobs.length,4);i++){if(!prevBlobs[i])continue;
       const vi=Math.sqrt((blobs[i].x-prevBlobs[i].x)**2+(blobs[i].y-prevBlobs[i].y)**2);
       if(vi>0.012&&Math.random()<0.3)playInterMel(s.intSynth,BELLS[Math.floor(blobs[i].y*(BELLS.length-1))],1,{amp:s.intAmp*0.5,release:1,pan:(blobs[i].x-0.5)*1.5});}
-    info='bell';spawnParticle(b.x*W,b.y*H,s.color,4+bv*40);
+    info='bell';
   }
 
-  // ── Scene 2: harp pairs ──
   if(si===2&&bv>0.008*sensScale&&now-lastB>300/sensScale){lastB=now;
     const idx=Math.floor(b.y*(scale.length-1));
     const note=scale[idx];
@@ -566,40 +619,36 @@ function trigInteractive(){
     const partner=scale[Math.min(idx+jump,scale.length-1)];
     playInterMel(s.intSynth,note,1.2,{amp:s.intAmp*(0.5+bv*4),release:1.5,pan:(b.x-0.5)*1.2});
     setTimeout(()=>playInterMel(s.intSynth,partner,1,{amp:s.intAmp*0.6,release:1.2,pan:(b.x-0.5)*-0.8}),150);
-    info='harp pair';spawnParticle(b.x*W,b.y*H,s.color,4+bv*30);
+    info='harp pair';
   }
 
-  // Scene 4: handled by trigPlexus60fps() in draw loop
   if(si===4){info='plexus poseVel:'+poseVel.toFixed(4)+' blobVel:'+sVel.toFixed(3);}
 
-  // ── Scene 5: floating notes ──
   if(si===5&&bv>0.008*sensScale&&now-lastB>200/sensScale){lastB=now;
     const note=scale[Math.floor(b.y*(scale.length-1))];
     playInterMel(s.intSynth,note,2,{amp:s.intAmp*(0.4+bv*3),release:2,pan:(b.x-0.5)*1.2});
-    info='float';spawnParticle(b.x*W,b.y*H,s.color,3+bv*25);
+    info='float';
   }
 
-  // ── Scene 6: multi-blob chimes ──
   if(si===6){blobs.forEach((bl,i)=>{if(i>5||!prevBlobs[i])return;
     const vi=Math.sqrt((bl.x-prevBlobs[i].x)**2+(bl.y-prevBlobs[i].y)**2);
     if(vi>0.008*sensScale&&Math.random()<0.2){
       const note=scale[Math.floor(bl.y*(scale.length-1))];
       playInterMel(s.intSynth,note,1.5,{amp:s.intAmp*(0.3+vi*3),release:1.5,pan:(bl.x-0.5)*1.4});
-      spawnParticle(bl.x*W,bl.y*H,s.color,3);
     }});info=blobs.length+' chimes';}
 
   $('aI').textContent=info||s.det;
 }
 
 // ============================================================
-// ALL GENERATIVE LOOPS (same as v4 but using playAutoMel)
+// ALL GENERATIVE LOOPS
 // ============================================================
 function nextChordIdx(pci,len){
   const r=Math.random();
-  if(r<0.40)return(pci+1)%len; // next sequential
-  if(r<0.65)return(pci+1+Math.floor(Math.random()*2))%len; // skip 1-2
-  if(r<0.85)return pci; // repeat current
-  return Math.floor(Math.random()*len); // random
+  if(r<0.40)return(pci+1)%len;
+  if(r<0.65)return(pci+1+Math.floor(Math.random()*2))%len;
+  if(r<0.85)return pci;
+  return Math.floor(Math.random()*len);
 }
 function startPadChords(){
   let pci=0;
@@ -656,7 +705,7 @@ function startBass(){
 function startMelody(){
   function tick(){const s=SC[curScene],scale=SCALES[curScene],bpm=getBpm();
     if(scale.length&&s.melSynth){
-      if(Math.random()>0.3/densityMod){
+      if(Math.random()>0.3){
         const[p,d,ok]=walk(mP,mD,scale);mP=p;mD=d;
         if(ok){const r=melRhythm(curScene,bpm);
           if(curScene===2){
@@ -678,7 +727,7 @@ function startMelody(){
 function startMelodyB(){
   function tick(){const s=SC[curScene],scale=SCALES[curScene],bpm=getBpm();
     if(scale.length&&s.melBSynth&&s.melBAmp>0){
-      if(Math.random()>0.35/densityMod){
+      if(Math.random()>0.35){
         const[p,d,ok]=walk(mBP,mBD,scale,0.15);mBP=p;mBD=d;
         if(ok){const r=melRhythm(curScene,bpm);
           let note=scale[mBP];if(curScene===0)note+=12;
@@ -694,7 +743,7 @@ function startMel2(){
   function tick(){const s=SC[curScene],scale=SCALES[curScene];
     if(s.mel2Synth&&scale.length){
       const[p,d,ok]=walk(m2P,m2D,scale,0.3);m2P=p;m2D=d;
-      if(ok&&Math.random()<0.6*densityMod){const dur=pick([1,1.5,2]);
+      if(ok&&Math.random()<0.6){const dur=pick([1,1.5,2]);
         playAutoMel(s.mel2Synth,scale[m2P],dur,{amp:s.mel2Amp,release:dur,pan:(Math.random()-0.5)*0.6});
         if(curScene===2&&Math.random()<0.4)setTimeout(()=>playAutoMel('sonic-pi-pretty_bell',scale[m2P]+12,1.5,{amp:0.08,release:1.5,pan:(Math.random()-0.5)*1.0}),200+Math.random()*300);
       }}
@@ -716,9 +765,8 @@ function startArp(){
 
 function startSparkle(){
   function tick(){const s=SC[curScene];
-    if(Math.random()<s.sparkleP*densityMod){const note=pick(BELLS);
-      playBg('sonic-pi-pretty_bell',note,0.5,{amp:0.06+Math.random()*0.08,release:0.5,pan:(Math.random()-0.5)*1.2});
-      spawnParticle(Math.random()*W,Math.random()*H,'#ffe',2);}
+    if(Math.random()<s.sparkleP){const note=pick(BELLS);
+      playBg('sonic-pi-pretty_bell',note,0.5,{amp:0.06+Math.random()*0.08,release:0.5,pan:(Math.random()-0.5)*1.2});}
     setT('sparkle',tick,180+Math.random()*280);
   }tick();
 }
@@ -747,8 +795,7 @@ function startSoundFX(){
     if(fx==='wind'&&Math.random()<0.3)playBg('sonic-pi-noise',40,3+Math.random()*4,{amp:0.05,attack:2,release:3,cutoff:40+Math.random()*15});
     else if(fx==='bird'&&Math.random()<0.2){const bn=86+Math.floor(Math.random()*8);
       playBg('sonic-pi-pretty_bell',bn,0.1,{amp:0.06,release:0.1});
-      setTimeout(()=>playBg('sonic-pi-pretty_bell',bn+2,0.08,{amp:0.05,release:0.08}),60+Math.random()*80);
-      spawnParticle(Math.random()*W,Math.random()*H*0.3,'#aaffaa',2);}
+      setTimeout(()=>playBg('sonic-pi-pretty_bell',bn+2,0.08,{amp:0.05,release:0.08}),60+Math.random()*80);}
     else if(fx==='radio-signal'){
       if(Math.random()<0.6)playBg('sonic-pi-noise',50+Math.floor(Math.random()*20),0.1+Math.random()*0.4,{amp:0.07+Math.random()*0.05,attack:0.01,release:0.2,cutoff:40+Math.random()*40});
       if(Math.random()<0.3)playBg('sonic-pi-noise',40+Math.floor(Math.random()*30),1+Math.random()*2,{amp:0.05,attack:0.3,release:1.5,cutoff:30+Math.random()*25});
@@ -771,10 +818,8 @@ function startSoundFX(){
 
 function startBellRain(){
   function tick(){if(curScene===6){
-    if(Math.random()<0.4*densityMod){playAutoMel('sonic-pi-pretty_bell',pick(SCALES[6]),1.5+Math.random()*2,{amp:0.08+Math.random()*0.08,release:2,pan:(Math.random()-0.5)*1.2});
-      spawnParticle(Math.random()*W,Math.random()*0.4*H,'#ffd700',3);}
-    if(Math.random()<0.25){playAutoMel('sonic-pi-pluck',pick(SCALES[6]),0.8,{amp:0.1,release:0.8});
-      spawnParticle(Math.random()*W,Math.random()*H,'#c0c0c0',2);}}
+    if(Math.random()<0.4){playAutoMel('sonic-pi-pretty_bell',pick(SCALES[6]),1.5+Math.random()*2,{amp:0.08+Math.random()*0.08,release:2,pan:(Math.random()-0.5)*1.2});}
+    if(Math.random()<0.25){playAutoMel('sonic-pi-pluck',pick(SCALES[6]),0.8,{amp:0.1,release:0.8});}}
     setT('bellrain',tick,250+Math.random()*500);
   }tick();
 }
@@ -798,40 +843,21 @@ function startAllLoops(){
   startBellRain();startFormlessHat();
 }
 
-// Particle stub — no visual, just a no-op so calls don't error
-function spawnParticle(){}
-
 // ============================================================
-// SCENE SWITCH
+// SCENE SWITCH — clean, no ramp (BG stays consistent)
 // ============================================================
-let transRafId=null;
 function setScene(n){
-  if(!started)return;
-  const prevBgScale=bgScale;
-  const targetBgScale=+$('bgVol').value/100;
-  curScene=n;ci=0;
+  if(!started)return;curScene=n;ci=0;
   const s=SC[n],scale=SCALES[n];
   if(scale.length){mP=Math.min(mP,scale.length-1);m2P=Math.min(m2P,scale.length-1);mBP=Math.min(mBP,scale.length-1);}
-  if(!bpmOverride){$('bpmCtrl').value=s.bpm;$('vBpm').textContent=s.bpm;}
-  // Ramp BG volume: fade out old → fade in new over transitionTime
-  if(transRafId)cancelAnimationFrame(transRafId);
-  const tStart=performance.now(),tHalf=transitionTime/2;
-  bgScale=0; // start silent
-  function rampBg(now){
-    const elapsed=now-tStart;
-    if(elapsed<tHalf){bgScale=targetBgScale*(1-elapsed/tHalf);}
-    else if(elapsed<transitionTime){bgScale=targetBgScale*((elapsed-tHalf)/tHalf);}
-    else{bgScale=targetBgScale;return;}
-    transRafId=requestAnimationFrame(rampBg);
-  }
-  transRafId=requestAnimationFrame(rampBg);
+  if(!bpmOverride){$('bpmCtrl').value=s.bpm;}
   startAllLoops();
-  $('scene-name').textContent=`#${n} ${s.name}`;
+  $('scene-name').textContent='#'+n+' '+s.name;
   const pct=s.energy*10;
   $('energy-fill').style.width=pct+'%';
   $('energy-fill').style.background=s.energy>7?'#f44':s.energy>4?'#fa4':s.energy>2?'#48a':'#446';
   document.querySelectorAll('.sb').forEach((el,i)=>el.classList.toggle('on',i===n));
-  log(`Scene ${n}: ${s.name} | det:${s.det} | ${getBpm()}bpm`);
+  log('Scene '+n+': '+s.name+' | det:'+s.det+' | '+getBpm()+'bpm');
 }
 window._setScene=setScene;
 
@@ -842,37 +868,99 @@ $('vol').oninput=function(){volScale=this.value/100;$('vVol').textContent=this.v
 $('bgVol').oninput=function(){bgScale=this.value/100;$('vBg').textContent=this.value;};
 $('melAVol').oninput=function(){melAScale=this.value/100;$('vMelA').textContent=this.value;};
 $('melBVol').oninput=function(){melBScale=this.value/100;$('vMelB').textContent=this.value;};
-$('bpmCtrl').oninput=function(){bpmOverride=+this.value;$('vBpm').textContent=this.value;};
-$('transCtrl').oninput=function(){transitionTime=+this.value;$('vTrans').textContent=(this.value/1000).toFixed(1)+'s';};
-$('densCtrl').oninput=function(){densityMod=0.3+(this.value/100)*1.7;$('vDens').textContent=this.value;};
+$('bpmCtrl').oninput=function(){bpmOverride=+this.value||null;};
 $('threshCtrl').oninput=function(){G.thresh=+this.value;$('vThr').textContent=this.value;};
 $('sensCtrl').oninput=function(){G.sens=+this.value;$('vSens').textContent=this.value;};
 window._toggleAuto=function(){G.autoMel=!G.autoMel;Z('btnAuto');$('btnAuto').textContent=G.autoMel?'Auto-Mel ON':'Auto-Mel OFF';};
 window._toggleDark=function(){G.dark=!G.dark;Z('btnDark');};
-window._toggleDbg=function(){G.dbg=!G.dbg;Z('btnDbg');};
-window._togglePose=function(){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!mpObj)loadMP();};
+window._togglePose=function(){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!poseLandmarker)loadMP();};
 $('poseTCtrl').oninput=function(){G.poseThresh=this.value/100;$('vPoseT').textContent=G.poseThresh.toFixed(2);};
+$('numPoses').onchange=function(){
+  G.numPoses=+this.value;
+  // Reload MP with new numPoses
+  if(poseLandmarker){poseLandmarker.close();poseLandmarker=null;}
+  if(G.mpOn)loadMP();
+};
 document.addEventListener('keydown',e=>{
   const n=parseInt(e.key);if(n>=0&&n<=6)setScene(n);
-  if(e.key==='d'||e.key==='D'){G.dbg=!G.dbg;Z('btnDbg');}
-  if(e.key==='p'||e.key==='P'){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!mpObj)loadMP();}
+  if(e.key==='p'||e.key==='P'){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!poseLandmarker)loadMP();}
   if(e.key==='a'||e.key==='A')window._toggleAuto();
 });
 
 // ============================================================
-// MONITOR — minimal, detection only, no decorative visuals
+// MANDALA RENDERING — 8-fold rotational symmetry from pose
+// ============================================================
+function renderMandala(){
+  // Fade trail
+  mandalaCx.fillStyle='rgba(10,8,5,0.03)';
+  mandalaCx.fillRect(0,0,mandalaC.width,mandalaC.height);
+
+  const cxM=mandalaC.width/2, cyM=mandalaC.height/2;
+  const folds=8;
+
+  for(let di=0;di<poses.length;di++){
+    const pose=poses[di];
+    if(!pose)continue;
+    const colors=MANDALA_COLORS[di%MANDALA_COLORS.length];
+    // Confidence from avg visibility of key landmarks
+    const KEY_LM=[0,11,12,15,16,23,24,27,28];
+    let conf=0,cnt=0;
+    KEY_LM.forEach(i=>{if(pose[i]&&pose[i].visibility!=null){conf+=pose[i].visibility;cnt++}});
+    conf=cnt>0?conf/cnt:0.5;
+    const ah=Math.round(96*conf).toString(16).padStart(2,'0');
+
+    for(let f=0;f<folds;f++){
+      const ang=(f/folds)*Math.PI*2;
+      const mir=f%2===0?1:-1;
+      mandalaCx.save();
+      mandalaCx.translate(cxM,cyM);
+      mandalaCx.rotate(ang);
+      mandalaCx.scale(mir,1);
+      mandalaCx.translate(-cxM,-cyM);
+
+      // Draw landmark dots
+      pose.forEach((lm,i)=>{
+        if((lm.visibility||0)<0.4)return;
+        mandalaCx.beginPath();
+        mandalaCx.arc(lm.x*mandalaC.width,lm.y*mandalaC.height,2,0,Math.PI*2);
+        mandalaCx.fillStyle=colors[i%4]+ah;
+        mandalaCx.fill();
+      });
+
+      // Draw body connections
+      BODY_CONNECTIONS.forEach(([a,b])=>{
+        const la=pose[a],lb=pose[b];
+        if(!la||!lb||(la.visibility||0)<0.3||(lb.visibility||0)<0.3)return;
+        mandalaCx.beginPath();
+        mandalaCx.moveTo(la.x*mandalaC.width,la.y*mandalaC.height);
+        mandalaCx.lineTo(lb.x*mandalaC.width,lb.y*mandalaC.height);
+        mandalaCx.strokeStyle=colors[0]+ah;
+        mandalaCx.lineWidth=1;
+        mandalaCx.stroke();
+      });
+
+      mandalaCx.restore();
+    }
+  }
+
+  // Copy to main screen
+  mvx.drawImage(mandalaC,0,0,MW,MH);
+}
+
+// ============================================================
+// MONITOR + MAIN DRAW LOOP
 // ============================================================
 let fN=0,fT=0;
 
 function draw(now){
-  // Pose-driven triggers at 60fps (all scenes when pose enabled)
+  // Pose-driven triggers at 60fps
   if(started&&G.mpOn)trigPlexus60fps();
 
   // Clear monitor
   cx.fillStyle='#080810';cx.fillRect(0,0,W,H);
   const col=SC[curScene]?.color||'#448';
 
-  // Camera feed — native resolution, centered, no stretch
+  // Camera feed
   if(video&&video.videoWidth){
     const vw=video.videoWidth,vh=video.videoHeight;
     const scale=Math.min(W/vw,H/vh);
@@ -881,39 +969,44 @@ function draw(now){
     cx.globalAlpha=0.5;cx.drawImage(video,dx,dy,dw,dh);cx.globalAlpha=1;
   }
 
-  // Compute camera-aligned coords
+  // Camera-aligned coords
   const vw=video?video.videoWidth||320:320,vh=video?video.videoHeight||240:240;
   const scale=Math.min(W/vw,H/vh);
   const dw=vw*scale,dh=vh*scale,dx=(W-dw)/2,dy=(H-dh)/2;
   function cx2(nx){return dx+nx*dw}
   function cy2(ny){return dy+ny*dh}
 
-  // Blob dots (small, simple) — skip on scene 4 (pose only)
+  // Blob dots (skip scene 4)
   if(curScene!==4){
     blobs.forEach(b=>{
       cx.fillStyle=col;cx.beginPath();cx.arc(cx2(b.x),cy2(b.y),3+b.sz*0.5,0,Math.PI*2);cx.fill();
     });
   }
 
-  // Pose skeleton (always show if available)
-  if(pose){const lm=pose.lm;
-    cx.strokeStyle='#0f0';cx.lineWidth=1;
+  // Pose skeletons (all detected persons)
+  const skelColors=['#0f0','#0cf','#f80'];
+  for(let di=0;di<poses.length;di++){
+    const lm=poses[di];if(!lm)continue;
+    const sc=skelColors[di%skelColors.length];
+    cx.strokeStyle=sc;cx.lineWidth=1;
     [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]].forEach(([a,b])=>{
+      if(!lm[a]||!lm[b])return;
       cx.beginPath();cx.moveTo(cx2(lm[a].x),cy2(lm[a].y));cx.lineTo(cx2(lm[b].x),cy2(lm[b].y));cx.stroke();});
-    lm.forEach(l=>{cx.fillStyle='#0f0';cx.beginPath();cx.arc(cx2(l.x),cy2(l.y),2,0,Math.PI*2);cx.fill();});
+    lm.forEach(l=>{if(!l)return;cx.fillStyle=sc;cx.beginPath();cx.arc(cx2(l.x),cy2(l.y),2,0,Math.PI*2);cx.fill();});
   }
 
   // Status text on monitor
   cx.fillStyle='#446';cx.font='9px monospace';
-  cx.fillText(`#${curScene} ${SC[curScene].name} | ${getBpm()}bpm | poseVel:${poseVel.toFixed(3)}`,4,H-4);
+  cx.fillText('#'+curScene+' '+SC[curScene].name+' | '+getBpm()+'bpm | poses:'+poses.length+' poseVel:'+poseVel.toFixed(3),4,H-4);
 
-  // Update main screen label
-  $('main-border').textContent=`#${curScene} ${SC[curScene].name} — ${SC[curScene].nameT}`;
+  // Main screen: mandala visual
+  if(started)renderMandala();
 
   // FPS
   fN++;if(now-fT>1000){$('nF').textContent=fN;fN=0;fT=now;}
 }
 function loop(now){requestAnimationFrame(loop);draw(now);}
+rz();
 requestAnimationFrame(loop);
 
 // ============================================================
