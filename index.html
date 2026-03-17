@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Afterlife Dance</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#ddd;font-family:system-ui;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:24px;padding:40px 20px}
+h1{color:#8af;font-size:1.6em;font-weight:300;letter-spacing:4px}
+.sub{color:#446;font-size:0.85em;margin-top:-16px}
+.cards{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;max-width:900px}
+a{text-decoration:none}
+.card{background:#0a0a15;border:1px solid #222;border-radius:12px;padding:24px 28px;width:280px;cursor:pointer;transition:all 0.3s}
+.card:hover{border-color:#448;background:#0c0c1a;transform:translateY(-2px)}
+.card h2{color:#8af;font-size:1em;margin-bottom:6px;font-weight:400}
+.card p{color:#556;font-size:0.78em;line-height:1.5}
+.card .tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:0.65em;margin-top:8px}
+.main .tag{background:#2a1a2a;color:#c688cc}
+.sc .tag{background:#1a2244;color:#6688cc}
+.khaen .tag{background:#2a2a1a;color:#aa8866}
+.legacy .tag{background:#1a2222;color:#668888}
+.foot{color:#333;font-size:0.7em;margin-top:20px;text-align:center}
+.rec{color:#f44;font-size:0.65em;font-weight:bold;margin-bottom:-2px}
+</style></head><body>
+<h1>AFTERLIFE DANCE</h1>
+<div class="sub">Emergence: The After Party &mdash; York Manor, LA &mdash; Mar 28, 2026</div>
+<div class="cards">
+  <a href="engine_sc_interactive.html">
+    <div class="card main">
+      <div class="rec">RECOMMENDED</div>
+      <h2>SC Interactive</h2>
+      <p>Camera + MediaPipe pose + SuperCollider WASM. 7 scenes, 4 sound layers, body-driven melody + drums. Full performance engine.</p>
+      <p style="color:#888;margin-top:6px">Keys 0-6 | Camera | Pose | MelA/B DJ</p>
+      <span class="tag">v5 &mdash; SuperCollider WASM + MediaPipe</span>
+    </div>
+  </a>
+  <a href="engine_sc.html">
+    <div class="card sc">
+      <h2>SC Sound Only</h2>
+      <p>Same SuperCollider sound engine, no camera or detection. Pure generative audio across 7 scenes.</p>
+      <p style="color:#888;margin-top:6px">Keys 0-6 | Sound only</p>
+      <span class="tag">v4 &mdash; SuperCollider WASM</span>
+    </div>
+  </a>
+  <a href="engine_khaen.html">
+    <div class="card khaen">
+      <h2>Khaen + Pin</h2>
+      <p>Generative Isan music. Khaen (legato saw), Pin (FM pluck), bass, pad, drums. Weighted chord transitions.</p>
+      <p style="color:#888;margin-top:6px">BPM 96 | Tone.js</p>
+      <span class="tag">Tone.js &mdash; Isan generative</span>
+    </div>
+  </a>
+  <a href="engine.html">
+    <div class="card legacy">
+      <h2>Legacy Full</h2>
+      <p>Original Tone.js engine with camera + pose detection. 7 scenes.</p>
+      <span class="tag">v8 &mdash; Tone.js + Camera</span>
+    </div>
+  </a>
+  <a href="engine_flat.html">
+    <div class="card legacy">
+      <h2>Legacy Flat</h2>
+      <p>Tone.js sound only. No camera. Stars background.</p>
+      <span class="tag">v9 &mdash; Tone.js standalone</span>
+    </div>
+  </a>
+</div>
+<div class="foot">Wave Pongruengkiat x Bri-yarni Oracle<br>Open source &mdash; <a href="https://github.com/wvweeratouch/afterlife-dance" style="color:#446">GitHub</a></div>
+</body></html>

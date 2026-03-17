@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afterlife Dance — Sound x Visual Map v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-serif;padding:20px}
+h1{color:#fff;font-size:1.4em;margin-bottom:2px}
+.sub{color:#666;font-size:0.82em;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+thead th{background:#111;color:#777;padding:8px 6px;text-align:left;font-size:0.7em;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #222;position:sticky;top:0;z-index:1}
+tbody td{padding:10px 6px;border-bottom:1px solid #151515;vertical-align:top;font-size:0.82em;line-height:1.55}
+tbody tr:hover{background:#0d0d0d}
+th:nth-child(1){width:10%}th:nth-child(2){width:5%}th:nth-child(3){width:5%}th:nth-child(4){width:40%}th:nth-child(5){width:40%}
+.scene{font-weight:700;color:#fff;font-size:0.95em}
+.scene-num{color:#555;font-size:0.75em;display:block}
+.scene-khwan{color:#888;font-size:0.78em;display:block;margin-top:2px;font-style:italic}
+.energy-bar{height:6px;border-radius:3px;margin-top:3px}
+.time{color:#666;font-size:0.82em;text-align:center}
+.energy-num{color:#888;font-size:0.82em;text-align:center;font-weight:700}
+.label{display:block;color:#ffcc44;font-weight:600;font-size:0.72em;margin:6px 0 2px 0;text-transform:uppercase;letter-spacing:0.5px}
+.label:first-child{margin-top:0}
+.src{color:#555;font-size:0.75em}
+.inst{color:#88ccff}
+.vis{color:#cc88ff}
+.sym{color:#ff8866}
+.note{color:#555;font-size:0.75em;margin-top:4px;padding-top:4px;border-top:1px solid #1a1a1a}
+.tone{color:#66aa88;font-size:0.78em}
+tr[data-s="0"] td:first-child{border-left:3px solid #555}
+tr[data-s="1"] td:first-child{border-left:3px solid #4488ff}
+tr[data-s="2"] td:first-child{border-left:3px solid #44aa88}
+tr[data-s="3"] td:first-child{border-left:3px solid #886644}
+tr[data-s="4"] td:first-child{border-left:3px solid #ff4444}
+tr[data-s="5"] td:first-child{border-left:3px solid #884488}
+tr[data-s="6"] td:first-child{border-left:3px solid #ffaa44}
+.tech{background:#0a0f0a;border:1px solid #1a2a1a;border-radius:4px;padding:6px;margin-top:10px;font-size:0.78em;color:#668}
+.tech-t{color:#4a8a4a;font-weight:600;font-size:0.7em;text-transform:uppercase;margin-bottom:3px;display:block}
+</style>
+</head>
+<body>
+
+<h1>Afterlife Dance — Sound x Visual Map v2</h1>
+<div class="sub">7 scenes. Updated 2026-03-16. Tone.js engine. No breath noise. No violin. No bass. แคน = detuned sawtooth pair through bandpass. 3 separated threads (audio/detect/draw).</div>
+
+<table>
+<thead>
+<tr><th>Scene</th><th>Time</th><th>Energy</th><th>Sound</th><th>Visual</th></tr>
+</thead>
+<tbody>
+
+<!-- SCENE 0 -->
+<tr data-s="0">
+<td>
+<span class="scene-num">#0</span>
+<span class="scene">Summoning Chanting</span>
+<span class="scene-khwan">เรียกขวัญ / สู่ขวัญ</span>
+</td>
+<td class="time">00:00<br>—<br>02:00</td>
+<td class="energy-num">0→2<div class="energy-bar" style="background:linear-gradient(to right,#333,#555);width:20%"></div></td>
+<td>
+<span class="label">Background (always on)</span>
+Pad chord (PolySynth FMSynth) — very quiet, low register. Chord changes every 2 bars synced to BPM. Sparse melody walking through pentatonic scale — high rest probability (50%). Heartbeat kick (MembraneSynth) every half note.
+<br>
+<span class="label">Piramon (live)</span>
+Piramon chants live over the system. System plays underneath.
+<br>
+<span class="label">Interactive</span>
+None — detection OFF. Pre-programmed only.
+<div class="tech">
+<span class="tech-t">Tone.js</span>
+Pad: <span class="tone">PolySynth(FMSynth) vol:-22 → Chorus → Reverb</span><br>
+Melody: <span class="tone">FMSynth vol:-22 → FeedbackDelay → Reverb</span><br>
+Kick: <span class="tone">MembraneSynth → Reverb</span><br>
+Scale: PENTA, rest prob 0.5
+</div>
+<div class="note">Jas & Vanessa enter space, prepare string. Piramon walks to stage.</div>
+</td>
+<td>
+<span class="label">Reference</span>
+<span class="vis">Darkness + single warm spot on Piramon</span>. ก้นหอย spiral beginning to rotate.
+<br>
+<span class="label">Dynamic</span>
+Almost nothing. Stars twinkling. Single point of warm light.
+<br>
+<span class="label">Detection</span>
+OFF. No blobs, no pose. Visual runs autonomous — stars only.
+</td>
+</tr>
+
+<!-- SCENE 1 -->
+<tr data-s="1">
+<td>
+<span class="scene-num">#1</span>
+<span class="scene">Star Formation</span>
+<span class="scene-khwan">ขวัญ gathering into หิง</span>
+</td>
+<td class="time">02:00<br>—<br>05:00</td>
+<td class="energy-num">2→8<div class="energy-bar" style="background:linear-gradient(to right,#336,#4488ff);width:80%"></div></td>
+<td>
+<span class="label">Background</span>
+Pad chord building (vol ramps up). Melody walks pentatonic — lower rest probability (15%). Counter melody enters (AMSynth, offset 8th note). Sparkle (MetalSynth) occasional. Grace notes every 2 bars.
+<br>
+<span class="label">Interactive (blob → bells)</span>
+Each blob movement → FM bell (PolySynth FMSynth, harmonicity 5.4). Y position = note from BELLS scale. Multiple blobs = staggered bells (120ms apart). Velocity spike → ลายแคน phrase: walkNote() generates 5-8 notes through mid scale, random durations (8th to half note).
+<br>
+<span class="label">Movement manipulates</span>
+Ongoing blob movement → modulates filter frequency of existing pad (brightness). Stops moving → filter closes back slowly.
+<div class="tech">
+<span class="tech-t">Tone.js</span>
+Bell: <span class="tone">PolySynth(FMSynth) harm:5.4 modIdx:6 → FeedbackDelay → Reverb</span><br>
+ลาย: <span class="tone">same FMSynth as melody, sawtooth, bandpass Q:3</span><br>
+Detection: BLOB. setInterval 200ms.
+</div>
+<div class="note">Collective string cut into ball. Costume LED. Put in pocket.</div>
+</td>
+<td>
+<span class="label">Reference</span>
+<span class="vis">วงมีแฉก (star-burst) forming</span> — rays appearing from center. <span class="src">(note 027)</span>
+<br>
+<span class="label">Dynamic</span>
+Blob positions → particle trails converging inward. Each blob = glow point with trail.
+<br>
+<span class="label">Detection</span>
+BLOB. Costume LEDs tracked. Placeholder: colored circles + glow + trails.
+</td>
+</tr>
+
+<!-- SCENE 2 -->
+<tr data-s="2">
+<td>
+<span class="scene-num">#2</span>
+<span class="scene">Binary</span>
+<span class="scene-khwan">หิง-ขวัญ / มิ่ง-แนน</span>
+</td>
+<td class="time">05:00<br>—<br>08:00</td>
+<td class="energy-num">8→5<div class="energy-bar" style="background:linear-gradient(to right,#4488ff,#44aa88);width:60%"></div></td>
+<td>
+<span class="label">Background</span>
+Pad + melody + counter melody continue. Sparkle continues.
+<br>
+<span class="label">Interactive (2 blobs → entangled bells)</span>
+Quantum entanglement: 2 blobs tracked. Blob A y-position → note A. Blob B → MIRROR note (1 - y). Both trigger simultaneously with 100ms offset. One moves → both sound. Distance between blobs → filter spread. Beating from close frequencies (blob freq ± 1.5Hz via detuned pair).
+<br>
+<span class="label">Movement manipulates</span>
+Blob velocity → filter openness on pad. Orbital movement → panning L↔R (via Tone.Panner if implemented).
+<div class="tech">
+<span class="tech-t">Tone.js</span>
+Same iBell PolySynth. Two notes mirrored.<br>
+Detection: BLOB (2 blobs expected). LED on base.
+</div>
+<div class="note">LED on base. Hyper trigger. Orbiting walk.</div>
+</td>
+<td>
+<span class="label">Reference</span>
+<span class="vis">Two spirals orbiting</span>. Inverted T (⊥). Blue hues. <span class="src">(note 018)</span>
+<br>
+<span class="label">Dynamic</span>
+Two blob glow points in orbital dance. Trails show figure-eight paths.
+<br>
+<span class="label">Detection</span>
+BLOB. 2 LED sources tracked.
+</td>
+</tr>
+
+<!-- SCENE 3 -->
+<tr data-s="3">
+<td>
+<span class="scene-num">#3</span>
+<span class="scene">Formless Bodies</span>
+<span class="scene-khwan">ร่างเสมือน / ไม่มีรูปร่าง</span>
+</td>
+<td class="time">08:00<br>—<br>10:00</td>
+<td class="energy-num">5→0<div class="energy-bar" style="background:linear-gradient(to right,#886644,#333);width:15%"></div></td>
+<td>
+<span class="label">Background</span>
+Pad quieter (vol ramps to -22). NO melody. NO counter melody. NO sparkle. Pad alone, dissolving.
+<br>
+<span class="label">Gibberish (autonomous)</span>
+NoiseSynth (pink noise) → 2 bandpass formant filters. Formant frequencies shift randomly every 8th note = different vowel each time. 5 vowel presets: [270,2300], [730,1090], [300,870], [660,1720], [520,1190]. Random duration (16th to dotted quarter). Random velocity.
+<br>
+<span class="label">Sub drone</span>
+AMSynth plays low notes (C2,D2,E2,G2) every 2 bars. Very quiet.
+<br>
+<span class="label">Interactive</span>
+NONE — detection OFF. System plays autonomously. The camera cannot find the bodies = ร่างเสมือน.
+<br>
+<span class="label">Reverb</span>
+Wet ramps to 0.6 — more distant, echo without source.
+<div class="tech">
+<span class="tech-t">Tone.js</span>
+Gibberish: <span class="tone">NoiseSynth(pink) → Filter(bandpass, shifting) × 2 → Gain → Reverb</span><br>
+Sub: <span class="tone">AMSynth vol:-18 low notes</span><br>
+Detection: OFF by design.
+</div>
+<div class="note">Dancers merge under plate (walking). Bubbles L&R.</div>
+</td>
+<td>
+<span class="label">Reference</span>
+<span class="vis">ร่างเสมือน</span> — dissolving. Particles losing coherence. Star-burst fading. <span class="src">(note 033)</span>
+<br>
+<span class="label">Dynamic</span>
+NO tracked points. Visual runs autonomous — particles slowly diffusing, losing boundary.
+<br>
+<span class="label">Detection</span>
+OFF. Deliberately untrackable. The absence IS the content.
+</td>
+</tr>
+
+<!-- SCENE 4 -->
+<tr data-s="4">
+<td>
+<span class="scene-num">#4</span>
+<span class="scene">Supernova</span>
+<span class="scene-khwan">อืดทืดศรีดโกรม / ขวัญหนี</span>
+</td>
+<td class="time">10:00<br>—<br>13:00</td>
+<td class="energy-num">0→10<div class="energy-bar" style="background:linear-gradient(to right,#884444,#ff4444);width:100%"></div></td>
+<td>
+<span class="label">Background</span>
+Pad very quiet (-28). Melody runs fast (8th, 16th notes, low rest prob 5%). Base kick every quarter note (MembraneSynth). Sparkle hits on offbeats.
+<br>
+<span class="label">Interactive (pose+blob → drums, CEING style)</span>
+<strong>MediaPipe (if available):</strong> Fastest joint wins → legs=kick, hands=hihat(MetalSynth), arms/torso=snare(kick+sparkle). 80ms cooldown. Velocity → volume directly.<br>
+<strong>Blob fallback:</strong> Blob velocity → kick/hat/snare based on Y position. 100ms cooldown.<br>
+<strong>Bright blob flash:</strong> br>0.7 → random dissonant bell burst.
+<br>
+<span class="label">แคน chaos (auto)</span>
+FMSynth walks chromatic scale, random detune ±30, random filter. Sparse (3% per tick).
+<br>
+<span class="label">Reverb</span>
+Wet ramps to 0.2 — dry, in-your-face.
+<div class="tech">
+<span class="tech-t">Tone.js</span>
+Kick: <span class="tone">MembraneSynth C1</span><br>
+Hat: <span class="tone">MetalSynth</span><br>
+Drums: <span class="tone">movement velocity → volume. Joint type → drum type.</span><br>
+Detection: POSE+BLOB. MediaPipe auto-loads.
+</div>
+<div class="note">Dancers spiral to peak. Flash from arms. Orb held up.</div>
+</td>
+<td>
+<span class="label">Reference</span>
+<span class="vis">วงมีแฉก SHATTERING</span> — star-burst breaking. Spirals → lines. <span class="src">(note 027)</span>
+<br>
+<span class="label">Dynamic</span>
+EXPLOSION. Particles scattering outward. Full body skeleton (from MediaPipe during strobe).
+<br>
+<span class="label">Detection</span>
+★ POSE+BLOB. MediaPipe full body during strobe. Blob from arm flash.
+</td>
+</tr>
+
+<!-- SCENE 5 -->
+<tr data-s="5">
+<td>
+<span class="scene-num">#5</span>
+<span class="scene">Collapse</span>
+<span class="scene-khwan">เก็บมิ่งสิงขวัญ / ส่งขวัญขึ้นฟ้า</span>
+</td>
+<td class="time">13:00<br>—<br>16:00</td>
+<td class="energy-num">10→2<div class="energy-bar" style="background:linear-gradient(to right,#ff4444,#664488);width:25%"></div></td>
+<td>
+<span class="label">Background</span>
+Pad returns (vol ramps back to -18). Melody walks HIGH scale (E5-G6). Retrigger stutter: MetalSynth 8th note grid, 25% chance, quiet. Reverb wet 0.6 — vast echo.
+<br>
+<span class="label">Interactive (blob → ascending bells + retrigger)</span>
+Blob Y position → note from PENTA_HI. Velocity → triggers bell. 200ms cooldown. Notes drift upward = ส่งขวัญขึ้นฟ้า.
+<br>
+<span class="label">Movement manipulates</span>
+Sustained blob position → drone note (updateDrone) that follows blob Y. Movement velocity → filter openness.
+<div class="tech">
+<span class="tech-t">Tone.js</span>
+Bells: <span class="tone">iBell PolySynth, PENTA_HI scale</span><br>
+Stutter: <span class="tone">MetalSynth every 8n, 25% prob</span><br>
+Detection: BLOB. Plate light + token glow.
+</div>
+<div class="note">Dancers collapse. Open plates. Token + butterfly drone.</div>
+</td>
+<td>
+<span class="label">Reference</span>
+<span class="vis">หินตั้ง / บายศรี upward</span>. Particles settling + some drifting up. <span class="src">(note 019, 036)</span>
+<br>
+<span class="label">Dynamic</span>
+Settling stardust. Blob from plate light → ascending glow. Butterfly drone tracked as ascending point.
+<br>
+<span class="label">Detection</span>
+BLOB. Plate light. UV-reactive partial skeleton if available.
+</td>
+</tr>
+
+<!-- SCENE 6 -->
+<tr data-s="6">
+<td>
+<span class="scene-num">#6</span>
+<span class="scene">Distribute</span>
+<span class="scene-khwan">ความสัมพันธ์ต่างมิติ / cyclical</span>
+</td>
+<td class="time">16:00<br>—<br>end</td>
+<td class="energy-num">2→∞<div class="energy-bar" style="background:linear-gradient(to right,#886644,#ffaa44);width:35%"></div></td>
+<td>
+<span class="label">Background</span>
+Pad warm, gentle. Melody walks mid scale, generous rests. Counter melody returns. Heartbeat kick returns (callback to Scene 0). Sparkle returns. Music keeps playing as BG — no ending.
+<br>
+<span class="label">Interactive (multi-blob → chime bells)</span>
+Each audience token = tracked blob. Blob movement → FM bell from BELLS scale. More tokens in audience = more chimes = richer texture. Staggered 120ms per blob. The audience IS the particle field.
+<div class="tech">
+<span class="tech-t">Tone.js</span>
+Bells: <span class="tone">iBell PolySynth, BELLS scale, vel 0.04-0.14</span><br>
+Kick: <span class="tone">MembraneSynth every 2n (heartbeat callback)</span><br>
+Detection: BLOB (multi). Audience tokens.
+</div>
+<div class="note">Team opens container. Dancers give glowing lotus to audience.</div>
+</td>
+<td>
+<span class="label">Reference</span>
+<span class="vis">วงหินตั้ง</span> — audience inside the portal. <span class="src">(note 030)</span>
+<br>
+<span class="label">Dynamic</span>
+Each token = tracked point = particle on screen. Audience becomes the particle field. Gentle drift.
+<br>
+<span class="label">Detection</span>
+★ MULTI-BLOB. Dozens of tokens. Camera on audience.
+</td>
+</tr>
+
+</tbody>
+</table>
+
+<div style="margin-top:16px;padding:10px;background:#0a0f0a;border:1px solid #1a2a1a;border-radius:4px;font-size:0.8em;color:#668">
+<strong style="color:#4a8a4a">ARCHITECTURE</strong><br>
+Stack: Tone.js v14 (CDN) + Canvas 2D + MediaPipe Pose (CDN, lazy)<br>
+3 threads: Audio (Tone.Transport) | Detection (setInterval 200ms) | Draw (rAF)<br>
+Camera: 320×240 → offscreen 80×60. Blob detection at 5fps.<br>
+MediaPipe: pose@0.5, modelComplexity:0, auto-load on Scene 4.<br>
+Controls: BPM, Volume, Sensitivity, Echo Level, Transition Time, Light/Dark, Debug, Camera, MediaPipe toggle.<br>
+4 Principles: Focal(blob x), Energy(velocity), Curvature(pose trajectory), Awareness(pose jerk).<br>
+Transitions: all params lerp. Volume/reverb/filter ramp via Tone.js .rampTo()
+</div>
+
+</body>
+</html>

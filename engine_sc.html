@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Afterlife Dance — SC Engine v4</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:flex;flex-direction:column}
+#bar{padding:6px 12px;background:#0a0a12;border-bottom:1px solid #1a1a2a;display:flex;gap:8px;align-items:center;font-size:11px;z-index:5;flex-wrap:wrap}
+#bar label{color:#446;font-size:9px}
+#bar input[type=range]{width:55px;height:3px;-webkit-appearance:none;background:#222;border:none;border-radius:2px}
+#bar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:#668;border-radius:50%;cursor:pointer}
+.sb{padding:3px 8px;border:1px solid #333;border-radius:3px;background:#111;color:#888;cursor:pointer;font-size:10px;font-family:monospace}
+.sb.on{background:#224;color:#8af;border-color:#448}
+#scene-name{color:#8af;font-weight:bold;min-width:100px}
+#energy-bar{width:60px;height:8px;background:#111;border-radius:4px;overflow:hidden}
+#energy-fill{height:100%;border-radius:4px;transition:width 3s,background 3s}
+#log{position:absolute;bottom:8px;left:12px;color:#335;font-size:10px;max-width:500px;font-family:monospace}
+canvas{flex:1}
+#info{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#446;font-size:16px;cursor:pointer;z-index:5;text-align:center}
+#info.hide{display:none}
+.badge{display:inline-block;padding:2px 6px;background:#1a1a2e;border:1px solid #333;border-radius:3px;color:#668;font-size:9px;margin-left:6px}
+.ctrl{display:flex;align-items:center;gap:3px}
+.ctrl span{color:#556;font-size:9px;min-width:18px;text-align:right}
+</style>
+</head><body>
+<div id="bar">
+  <span style="color:#668;font-weight:bold">SC</span><span class="badge">v4</span>
+  <div class="ctrl"><label>Vol</label><input type="range" min="0" max="100" value="80" id="vol"><span id="vVol">80</span></div>
+  <div class="ctrl"><label>BG</label><input type="range" min="0" max="100" value="70" id="bgVol"><span id="vBg">70</span></div>
+  <div class="ctrl"><label>Mel</label><input type="range" min="0" max="100" value="70" id="melVol"><span id="vMel">70</span></div>
+  <div class="ctrl"><label>BPM</label><input type="range" min="40" max="180" value="72" id="bpmCtrl"><span id="vBpm">72</span></div>
+  <div class="ctrl"><label>Density</label><input type="range" min="0" max="100" value="50" id="densCtrl"><span id="vDens">50</span></div>
+  <span style="color:#333">|</span>
+  <span class="sb" onclick="window._setScene(0)">0 Chant</span>
+  <span class="sb" onclick="window._setScene(1)">1 Form</span>
+  <span class="sb" onclick="window._setScene(2)">2 Binary</span>
+  <span class="sb" onclick="window._setScene(3)">3 Formless</span>
+  <span class="sb" onclick="window._setScene(4)">4 Nova</span>
+  <span class="sb" onclick="window._setScene(5)">5 Collapse</span>
+  <span class="sb" onclick="window._setScene(6)">6 Distribute</span>
+  <span style="color:#333">|</span>
+  <span id="scene-name">—</span>
+  <div id="energy-bar"><div id="energy-fill" style="width:0%"></div></div>
+</div>
+<canvas id="c"></canvas>
+<div id="info">Click to start SuperCollider engine v4<br><span style="font-size:11px;color:#335">Loading ~5MB WASM · 35 synths · mouse drums on scene 4</span></div>
+<div id="log"></div>
+
+<script type="module">
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+let W,H;function rz(){W=cv.width=cv.offsetWidth;H=cv.height=cv.offsetHeight}rz();onresize=rz;
+const $=id=>document.getElementById(id);
+const log=m=>{$('log').textContent=m;console.log(m)};
+
+// ============================================================
+// SUPERSONIC
+// ============================================================
+import { SuperSonic } from "https://unpkg.com/supersonic-scsynth@latest";
+
+let sonic=null, started=false, curScene=0, nodeId=1000;
+let volScale=0.8, bgScale=0.7, melScale=0.7, densityMod=1.0, bpmOverride=null;
+
+async function init(){
+  log('Initializing SuperCollider WASM...');
+  sonic=new SuperSonic({
+    baseURL:"https://unpkg.com/supersonic-scsynth@latest/dist/",
+    coreBaseURL:"https://unpkg.com/supersonic-scsynth-core@latest/",
+    sampleBaseURL:"https://unpkg.com/supersonic-scsynth-samples@latest/samples/",
+    synthdefBaseURL:"https://unpkg.com/supersonic-scsynth-synthdefs@latest/synthdefs/",
+  });
+  await sonic.init();
+  log('Loading 35 SynthDefs...');
+  const defs=[
+    'prophet','dark_ambience','hollow','blade','pretty_bell','dull_bell',
+    'pluck','kalimba','piano','growl','hoover','tb303','organ_tonewheel',
+    'rhodey','fm','saw','noise','beep','supersaw',
+    // New instruments
+    'zawa','mod_sine','mod_fm','dsaw','dtri','recorder','bass_foundation','tech_saws',
+    // Drums
+    'sc808_bassdrum','sc808_snare','sc808_closed_hihat','sc808_open_hihat',
+    'sc808_clap','sc808_cowbell','sc808_cymbal','sc808_rimshot',
+    // FX
+    'fx_reverb','fx_echo','fx_gverb',
+  ];
+  await Promise.all(defs.map(d=>sonic.loadSynthDef('sonic-pi-'+d)));
+  log('SC ready. '+defs.length+' SynthDefs. v4.');
+  started=true;
+  $('info').classList.add('hide');
+  startAllLoops();
+  setScene(0);
+}
+
+// ============================================================
+// PLAY — with per-synth gain compensation
+// ============================================================
+const SYNTH_GAIN={
+  'sonic-pi-supersaw':0.45,'sonic-pi-tech_saws':0.5,'sonic-pi-prophet':0.65,
+  'sonic-pi-hoover':0.55,'sonic-pi-blade':0.6,'sonic-pi-dsaw':0.6,
+  'sonic-pi-dark_ambience':1.8,'sonic-pi-hollow':2.0,'sonic-pi-dull_bell':1.1,
+  'sonic-pi-pretty_bell':1.0,'sonic-pi-pluck':1.2,'sonic-pi-kalimba':1.1,
+  'sonic-pi-piano':1.0,'sonic-pi-rhodey':0.9,'sonic-pi-fm':0.8,
+  'sonic-pi-zawa':1.3,'sonic-pi-mod_sine':1.4,'sonic-pi-mod_fm':0.9,
+  'sonic-pi-recorder':1.1,'sonic-pi-dtri':1.2,'sonic-pi-beep':1.0,
+  'sonic-pi-tb303':0.7,'sonic-pi-growl':0.8,'sonic-pi-bass_foundation':0.9,
+  'sonic-pi-organ_tonewheel':0.8,'sonic-pi-noise':1.0,'sonic-pi-saw':0.7,
+};
+function synthGain(s){return SYNTH_GAIN[s]||1.0;}
+
+function nid(){return nodeId++}
+function play(synth,note,dur,p={}){
+  if(!sonic||!started)return;
+  const id=nid();
+  const amp=(p.amp||0.3)*volScale*synthGain(synth);
+  const args=['note',note,'sustain',dur,'amp',amp];
+  if(p.cutoff)args.push('cutoff',p.cutoff);
+  if(p.release!=null)args.push('release',p.release);
+  if(p.attack!=null)args.push('attack',p.attack);
+  if(p.pan!=null)args.push('pan',p.pan);
+  if(p.res)args.push('res',p.res);
+  sonic.send('/s_new',synth,id,0,0,...args);
+}
+function playBg(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*bgScale});}
+function playMel(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale});}
+function getBpm(){return bpmOverride||SC[curScene].bpm}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+
+// ============================================================
+// SCALES (MIDI) — with Arabic Saba + Brazilian Lydian b7
+// ============================================================
+const SCALES={
+  0:[57,60,62,64,67],                                // Am pentatonic whisper
+  1:[60,62,64,67,69,72,74,76],                        // Am pentatonic rise
+  2:[57,60,64,67,69,72,76],                            // orbit symmetric
+  3:[],                                                  // void
+  4:[57,60,62,64,67,69,72,74,76,79,81,84],            // chaos 3 octaves
+  5:[57,58,60,61,64,65,69,70,72],                          // Saba mid: A3 Bb3 C4 Db4 E4 F4 A4 Bb4 C5
+  6:[72,74,76,79,81,83,84,86,88,91],                  // Brazilian Lydian b7: C5 D5 E5 G5 A5 Bb5 C6 D6 E6 G6
+};
+const BELLS=[72,74,76,79,81,84,86,88];
+
+const CH={
+  0:[[45,52,57],[50,57,62],[52,59,64],[45,52,57]],
+  1:[[57,60,64,69,72],[53,57,60,65,69],[55,59,62,67,71],[52,55,59,64,67],[50,53,57,62,65]],
+  2:[[57,64,69,76],[60,67,72,79],[62,69,74,81],[64,71,76,83]],
+  3:[[33,45],[28,40],[26,38],[33,45]],
+  4:[[33,45,52,57,64],[38,50,57,62,69],[40,52,59,64,71],[43,55,62,67,74],[41,53,60,65,72]],
+  5:[[45,57,64,69],[41,53,61,65],[45,60,65,72],[43,57,64,70]],  // Saba voicings: A2-A3-E4-A4, F2-F3-Db4-F4, etc
+  6:[[60,64,67,72,76],[57,60,65,69,74],[55,59,62,67,71],[60,64,67,72,76]], // Brazilian
+};
+
+// ============================================================
+// SCENES
+// ============================================================
+const SC=[
+  // 0: Summoning — sacred, heartbeat
+  {name:'Summoning',nameT:'เรียกขวัญ',energy:2,color:'#445',
+   padSynth:'sonic-pi-dark_ambience', melSynth:'sonic-pi-kalimba', melBSynth:'sonic-pi-piano',
+   mel2Synth:null, bassSynth:'sonic-pi-bass_foundation', arpSynth:null,
+   bpm:72, padAmp:0.35, melAmp:0.18, melBAmp:0.07, mel2Amp:0, bassAmp:0.15,
+   sparkleP:0, kick:true, kickRate:2000,
+   release:6, attack:3, cutoff:80,
+   breathRate:0.12, breathAmp:0.1,
+   fxType:'wind'},
+
+  // 1: Formation — building energy
+  {name:'Formation',nameT:'ขวัญ gathering',energy:8,color:'#4488ff',
+   padSynth:'sonic-pi-prophet', melSynth:'sonic-pi-rhodey', melBSynth:'sonic-pi-kalimba',
+   mel2Synth:'sonic-pi-fm', bassSynth:'sonic-pi-tb303', arpSynth:'sonic-pi-kalimba',
+   bpm:108, padAmp:0.32, melAmp:0.28, melBAmp:0.15, mel2Amp:0.14, bassAmp:0.12,
+   sparkleP:0.2, kick:false, kickRate:0,
+   release:3, attack:1, cutoff:100,
+   breathRate:0.18, breathAmp:0.2,
+   fxType:null},
+
+  // 2: Binary — harp pluck + celestial bell
+  {name:'Binary',nameT:'หิง-ขวัญ',energy:6,color:'#44aa88',
+   padSynth:'sonic-pi-dull_bell', melSynth:'sonic-pi-pluck', melBSynth:'sonic-pi-pretty_bell',
+   mel2Synth:'sonic-pi-pretty_bell', bassSynth:'sonic-pi-bass_foundation', arpSynth:'sonic-pi-pluck',
+   bpm:100, padAmp:0.32, melAmp:0.22, melBAmp:0.12, mel2Amp:0.14, bassAmp:0.12,
+   sparkleP:0.15, kick:true, kickRate:1800,
+   release:2.5, attack:0.5, cutoff:90,
+   breathRate:0.22, breathAmp:0.18,
+   fxType:'bird'},
+
+  // 3: Formless — white noise radio, no melody
+  {name:'Formless',nameT:'ร่างเสมือน',energy:1,color:'#886644',
+   padSynth:'sonic-pi-hollow', melSynth:null, melBSynth:null,
+   mel2Synth:null, bassSynth:'sonic-pi-dark_ambience', arpSynth:null,
+   bpm:60, padAmp:0.5, melAmp:0, melBAmp:0, mel2Amp:0, bassAmp:0.25,
+   sparkleP:0, kick:false, kickRate:0,
+   release:8, attack:3, cutoff:75,
+   breathRate:0.08, breathAmp:0.25,
+   fxType:'radio-signal'},
+
+  // 4: Supernova — BG + plexus drums only
+  {name:'Supernova',nameT:'ขวัญหนี',energy:10,color:'#ff4444',
+   padSynth:'sonic-pi-supersaw', melSynth:null, melBSynth:null,
+   mel2Synth:null, bassSynth:'sonic-pi-hoover', arpSynth:null,
+   bpm:138, padAmp:0.35, melAmp:0, melBAmp:0, mel2Amp:0, bassAmp:0.15,
+   sparkleP:0, kick:true, kickRate:435,
+   release:0.8, attack:0.05, cutoff:120,
+   breathRate:0.3, breathAmp:0.08,
+   fxType:'noise-burst'},
+
+  // 5: Collapse — piano style, ethereal floating
+  {name:'Collapse',nameT:'ส่งขวัญขึ้นฟ้า',energy:3,color:'#884488',
+   padSynth:'sonic-pi-pretty_bell', melSynth:'sonic-pi-piano', melBSynth:'sonic-pi-rhodey',
+   mel2Synth:null, bassSynth:'sonic-pi-beep', arpSynth:null,
+   bpm:80, padAmp:0.25, melAmp:0.25, melBAmp:0.15, mel2Amp:0, bassAmp:0.08,
+   sparkleP:0.1, kick:false, kickRate:0,
+   release:6, attack:2, cutoff:90,
+   breathRate:0.1, breathAmp:0.22,
+   fxType:'ocean-space'},
+
+  // 6: Distribute — Brazilian Lydian b7, bell waterfall
+  {name:'Distribute',nameT:'cyclical · bells',energy:4,color:'#ffd700',
+   padSynth:'sonic-pi-dull_bell', melSynth:'sonic-pi-pretty_bell', melBSynth:'sonic-pi-pluck',
+   mel2Synth:'sonic-pi-pluck', bassSynth:'sonic-pi-bass_foundation', arpSynth:'sonic-pi-pretty_bell',
+   bpm:96, padAmp:0.3, melAmp:0.22, melBAmp:0.14, mel2Amp:0.14, bassAmp:0.12,
+   sparkleP:0.18, kick:true, kickRate:1250,
+   release:3, attack:1.5, cutoff:95,
+   breathRate:0.15, breathAmp:0.18,
+   fxType:'space-metal'},
+];
+
+// ============================================================
+// WALKER
+// ============================================================
+let ci=0, mP=2, mD=1, m2P=4, m2D=-1, mBP=3, mBD=-1;
+function walk(p,d,sc,restP=0){
+  if(!sc||!sc.length)return[0,1,false];
+  if(Math.random()<restP)return[p,d,false];
+  const old=p;
+  for(let i=0;i<6;i++){
+    let np=p,nd=d;const r=Math.random();
+    if(r<.35)np+=nd;else if(r<.55)np+=nd*2;else if(r<.7){nd*=-1;np+=nd;}
+    else if(r<.85)np+=Math.round(Math.random()*2)-1;
+    else np=Math.floor(Math.random()*sc.length);
+    if(np>=sc.length){np=sc.length-2;nd=-1;}if(np<0){np=1;nd=1;}
+    if(np!==old)return[np,nd,true];
+  }
+  return[(p+1)%sc.length,d,true];
+}
+
+// ============================================================
+// TIMERS
+// ============================================================
+const T={};
+function setT(name,fn,ms){T[name]=setTimeout(fn,ms);}
+function clearAll(){Object.keys(T).forEach(k=>{clearTimeout(T[k]);delete T[k];})}
+
+// ============================================================
+// PER-SCENE RHYTHM — returns {dur, next} in ms
+// ============================================================
+function melRhythm(scene,bpm){
+  const q=60000/bpm;
+  const e=q/2, s=q/4, t=q/3;
+  const r=Math.random(); // single roll decides subdivision
+
+  if(scene===0){
+    // Summoning: mostly whole/half, rare quarter
+    if(r<0.4)return{dur:4,next:q*4+Math.random()*q*2};
+    if(r<0.7)return{dur:2,next:q*2+Math.random()*q*2};
+    if(r<0.9)return{dur:3,next:q*3};
+    return{dur:1,next:q*1.5}; // rare quarter
+  }
+  if(scene===1){
+    // Formation: mostly quarter/8th, 15% chance 16th burst, 10% triplet
+    if(r<0.35)return{dur:1,next:q};
+    if(r<0.6)return{dur:0.5,next:e};
+    if(r<0.75)return{dur:0.75,next:e*1.5}; // dotted 8th
+    if(r<0.85)return{dur:0.3,next:s}; // 16th — by chance
+    if(r<0.95)return{dur:0.5,next:t}; // triplet — by chance
+    return{dur:0.3,next:e+s}; // syncopated — rare
+  }
+  if(scene===2){
+    // Binary: mostly quarter pairs, 10% triplet, 10% long sustain
+    if(r<0.3)return{dur:1,next:q*0.4}; // first of pair
+    if(r<0.55)return{dur:1.5,next:q*2.5}; // second of pair + gap
+    if(r<0.7)return{dur:1,next:q*1.5}; // syncopated
+    if(r<0.8)return{dur:2,next:q*3}; // long note
+    if(r<0.9)return{dur:0.75,next:t}; // triplet — by chance
+    return{dur:0.5,next:e}; // 8th — rare variety
+  }
+  if(scene===5){
+    // Collapse: mostly long notes, 10% grace 16th, 8% triplet (less than before)
+    if(r<0.3)return{dur:3,next:q*3+Math.random()*q};
+    if(r<0.5)return{dur:2,next:q*2+Math.random()*q};
+    if(r<0.65)return{dur:4,next:q*4};
+    if(r<0.8)return{dur:1.5,next:q*1.5};
+    if(r<0.88)return{dur:0.15,next:s}; // grace 16th — by chance
+    if(r<0.96)return{dur:0.5,next:t}; // triplet — rare (~8%)
+    return{dur:2,next:q*2.5};
+  }
+  if(scene===6){
+    // Distribute: mostly 8th, 15% 16th, 12% triplet cascade
+    if(r<0.4)return{dur:0.5,next:e};
+    if(r<0.6)return{dur:0.75,next:e};
+    if(r<0.75)return{dur:1,next:q};
+    if(r<0.87)return{dur:0.3,next:s}; // 16th — by chance
+    if(r<0.95)return{dur:0.5,next:t}; // triplet — by chance
+    return{dur:0.3,next:s*3}; // 16th + gap — rare
+  }
+  // Default: mostly quarter, chance of variety
+  if(r<0.5)return{dur:1,next:q};
+  if(r<0.7)return{dur:0.5,next:e};
+  if(r<0.85)return{dur:1.5,next:q*1.5};
+  if(r<0.93)return{dur:0.3,next:s};
+  return{dur:0.5,next:t};
+}
+
+// ============================================================
+// LAYER 1: PAD CHORDS
+// ============================================================
+function startPadChords(){
+  let pci=0;
+  function tick(){
+    const s=SC[curScene];
+    const chords=CH[curScene];
+    const ch=chords[pci%chords.length];
+    const breathMod=curScene===4?1:1+Math.sin(performance.now()*s.breathRate*0.001*Math.PI*2)*s.breathAmp;
+
+    if(curScene===0){
+      if(Math.random()>0.3)pci++;
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release+2,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release+2}),i*50));
+      setT('pad',tick,3500+Math.random()*3000);
+    }
+    else if(curScene===1){
+      pci++;
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*30));
+      if(Math.random()<0.2)setTimeout(()=>ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release*0.5,{amp:s.padAmp*0.6,attack:0.1,cutoff:s.cutoff,release:s.release*0.5}),i*20)),500);
+      setT('pad',tick,2000+Math.random()*3000);
+    }
+    else if(curScene===2){
+      pci++;
+      const ch2=chords[pci%chords.length];
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*30));
+      setTimeout(()=>{ch2.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release*0.7,{amp:s.padAmp*breathMod*0.8,attack:s.attack*0.5,cutoff:s.cutoff,release:s.release*0.7}),i*30));pci++;},400);
+      setT('pad',tick,3500+Math.random()*3000);
+    }
+    else if(curScene===3){
+      // Formless: play ALL notes at once (no creep-in), faster cycle
+      pci++;
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*80));
+      setT('pad',tick,3000+Math.random()*3000);
+    }
+    else if(curScene===4){
+      pci+=Math.random()<0.3?Math.floor(Math.random()*3):1;
+      const ch4=chords[pci%chords.length];
+      ch4.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*15));
+      setT('pad',tick,1000+Math.random()*1500);
+    }
+    else if(curScene===5){
+      // Collapse: slow phasing — long hold, chords overlap and drift
+      pci+=Math.random()<0.3?2:1;
+      const ch5=chords[pci%chords.length];
+      // Stagger notes widely so chord "blooms" over 2-3 seconds
+      ch5.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{
+        amp:s.padAmp*breathMod*(0.6+Math.random()*0.4),
+        attack:s.attack+Math.random()*2, // varied attack = phasing
+        cutoff:s.cutoff,release:s.release
+      }),i*500+Math.random()*800));
+      setT('pad',tick,6000+Math.random()*6000); // slow: 6-12s between chords
+    }
+    else if(curScene===6){
+      pci++;
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack*0.3,cutoff:s.cutoff,release:s.release,pan:(i/ch.length-0.5)*1.0}),i*100));
+      setT('pad',tick,1800+Math.random()*1500);
+    }
+    else{
+      pci++;
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*30));
+      setT('pad',tick,s.release*1000+1000);
+    }
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 2: BASS DRONE
+// ============================================================
+function startBass(){
+  function tick(){
+    const s=SC[curScene];
+    if(s.bassSynth){
+      const ch=CH[curScene][ci%CH[curScene].length];
+      playBg(s.bassSynth,ch[0],s.release*0.8,{amp:s.bassAmp,attack:s.attack*0.5,cutoff:70,release:s.release*0.8});
+    }
+    setT('bass',tick,3000+Math.random()*3000);
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 3: MELODY A — per-scene rhythm patterns
+// ============================================================
+function startMelody(){
+  function tick(){
+    const s=SC[curScene];
+    const scale=SCALES[curScene];
+    const bpm=getBpm();
+
+    if(scale.length && s.melSynth){
+      const restThresh=s.melAmp>0?(1-(1-0.15)/densityMod):1; // adjusted rest
+      if(Math.random()>restThresh*0.3){
+        const[p,d,ok]=walk(mP,mD,scale);mP=p;mD=d;
+        if(ok){
+          const r=melRhythm(curScene,bpm);
+
+          // Scene 2: harp — interval jump (3rd/4th/5th), not mirror
+          if(curScene===2){
+            playMel(s.melSynth,scale[mP],r.dur,{amp:s.melAmp,release:r.dur*1.5,pan:(Math.random()-0.5)*0.8});
+            const jump=pick([2,3,4]);
+            const partner=Math.min(mP+jump,scale.length-1);
+            setTimeout(()=>playMel(s.melSynth,scale[partner],r.dur*0.8,{amp:s.melAmp*0.65,release:r.dur,pan:(Math.random()-0.5)*0.8}),150+Math.random()*150);
+          } else {
+            playMel(s.melSynth,scale[mP],r.dur,{amp:s.melAmp,release:r.dur,pan:(Math.random()-0.5)*0.8});
+          }
+
+          // Grace notes (scenes 1,2,5,6)
+          if((curScene===1||curScene===2||curScene===5||curScene===6)&&Math.random()<0.2){
+            const gn=scale[Math.min(mP+1,scale.length-1)];
+            playMel(s.melSynth,gn,0.08,{amp:s.melAmp*0.35,release:0.1});
+          }
+
+          setT('mel',tick,r.next*(0.9+Math.random()*0.2));
+          return;
+        }
+      }
+    }
+    const q=60000/bpm;
+    setT('mel',tick,q*(0.8+Math.random()*0.4));
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 3B: MELODY B — second voice
+// ============================================================
+function startMelodyB(){
+  function tick(){
+    const s=SC[curScene];
+    const scale=SCALES[curScene];
+    const bpm=getBpm();
+    if(scale.length && s.melBSynth && s.melBAmp>0){
+      if(Math.random()>0.35/densityMod){
+        const[p,d,ok]=walk(mBP,mBD,scale,0.15);mBP=p;mBD=d;
+        if(ok){
+          const r=melRhythm(curScene,bpm);
+          let note=scale[mBP];
+
+          // Scene 0: ghost piano plays +12 (high register)
+          if(curScene===0)note+=12;
+          // Scene 1: kalimba plays staccato
+          const dur=curScene===1?Math.min(r.dur,0.3):r.dur;
+          // Scene 5: zawa singing bowl — long sustain
+          const bowlDur=curScene===5?r.dur*3:dur;
+
+          playMel(s.melBSynth,note,bowlDur,{amp:s.melBAmp,release:bowlDur,pan:(Math.random()-0.5)*1.0});
+
+          setT('melB',tick,r.next*(1.1+Math.random()*0.4));
+          return;
+        }
+      }
+    }
+    const q=60000/bpm;
+    setT('melB',tick,q*(1.0+Math.random()*0.6));
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 4: COUNTER MELODY
+// ============================================================
+function startMel2(){
+  function tick(){
+    const s=SC[curScene];
+    const scale=SCALES[curScene];
+    if(s.mel2Synth && scale.length){
+      const[p,d,ok]=walk(m2P,m2D,scale,0.3);m2P=p;m2D=d;
+      if(ok && Math.random()<0.6*densityMod){
+        const dur=pick([1,1.5,2]);
+        playMel(s.mel2Synth,scale[m2P],dur,{amp:s.mel2Amp,release:dur,pan:(Math.random()-0.5)*0.6});
+        if(curScene===2 && Math.random()<0.4){
+          setTimeout(()=>playMel('sonic-pi-pretty_bell',scale[m2P]+12,1.5,{amp:0.08,release:1.5,pan:(Math.random()-0.5)*1.0}),200+Math.random()*300);
+        }
+      }
+    }
+    setT('mel2',tick,(60000/getBpm()*2)*(0.8+Math.random()*0.4));
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 5: ARPEGGIO (scenes 1,2,6)
+// ============================================================
+function startArp(){
+  let ai=0;
+  function tick(){
+    const s=SC[curScene];
+    if(s.arpSynth && (curScene===1||curScene===2||curScene===6)){
+      const ch=CH[curScene][ci%CH[curScene].length];
+      const note=ch[ai%ch.length];
+      // Scene 2: harp arpeggio — pluck in high register with spread
+      if(curScene===2){
+        playMel(s.arpSynth,note+12,0.6,{amp:0.07+Math.random()*0.05,release:0.8,pan:(Math.random()-0.5)*1.2});
+      } else {
+        playMel(s.arpSynth,note+12,0.3,{amp:0.08+Math.random()*0.06,release:0.3,pan:(Math.random()-0.5)*1.0});
+      }
+      ai++;
+    }
+    const bpm=getBpm();
+    setT('arp',tick,(60000/bpm/2)*(0.9+Math.random()*0.2));
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 6: SPARKLE
+// ============================================================
+function startSparkle(){
+  function tick(){
+    const s=SC[curScene];
+    if(Math.random()<s.sparkleP*densityMod){
+      const note=pick(BELLS);
+      playBg('sonic-pi-pretty_bell',note,0.5,{amp:0.06+Math.random()*0.08,release:0.5,pan:(Math.random()-0.5)*1.2});
+      spawnParticle(Math.random()*W,Math.random()*H,'#ffe',2);
+      // no stutter on scene 5 — keep it clean
+    }
+    setT('sparkle',tick,180+Math.random()*280);
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 7: KICK
+// ============================================================
+function startKick(){
+  function tick(){
+    const s=SC[curScene];
+    if(s.kick)playBg('sonic-pi-sc808_bassdrum',36,0.3,{amp:0.35});
+    setT('kick',tick,s.kick?s.kickRate:600);
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 8: FORMLESS EXTRAS (scene 3)
+// ============================================================
+function startFormless(){
+  function tick(){
+    if(curScene===3 && sonic){
+      if(Math.random()<0.4)playBg('sonic-pi-growl',pick([33,36,40,45]),4+Math.random()*4,{amp:0.3,attack:1.5,release:4,cutoff:70});
+      if(Math.random()<0.4)playBg('sonic-pi-dark_ambience',pick([33,38,40,45]),6,{amp:0.25,attack:1.5,release:6,cutoff:65});
+      if(Math.random()<0.35)playBg('sonic-pi-hollow',pick([33,36,40,45]),8,{amp:0.25,attack:2,release:8,cutoff:60});
+      // Extra: mod_sine drone for thickness
+      if(Math.random()<0.2)playBg('sonic-pi-mod_sine',pick([33,36,40]),6,{amp:0.12,attack:3,release:6,cutoff:55});
+    }
+    setT('formless',tick,1000+Math.random()*1500);
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 9: SOUND FX
+// ============================================================
+function startSoundFX(){
+  function tick(){
+    const fx=SC[curScene].fxType;
+
+    if(fx==='wind'){
+      if(Math.random()<0.3)playBg('sonic-pi-noise',40,3+Math.random()*4,{amp:0.05,attack:2,release:3,cutoff:40+Math.random()*15});
+    }
+    else if(fx==='bird'){
+      if(Math.random()<0.2){
+        const bn=86+Math.floor(Math.random()*8);
+        playBg('sonic-pi-pretty_bell',bn,0.1,{amp:0.06,release:0.1});
+        setTimeout(()=>playBg('sonic-pi-pretty_bell',bn+2,0.08,{amp:0.05,release:0.08}),60+Math.random()*80);
+        setTimeout(()=>playBg('sonic-pi-pretty_bell',bn-1,0.06,{amp:0.04,release:0.06}),160+Math.random()*60);
+        spawnParticle(Math.random()*W,Math.random()*H*0.3,'#aaffaa',2);
+      }
+    }
+    else if(fx==='radio-signal'){
+      // White noise static — high probability, fast tick
+      if(Math.random()<0.6)playBg('sonic-pi-noise',50+Math.floor(Math.random()*20),0.1+Math.random()*0.4,{amp:0.07+Math.random()*0.05,attack:0.01,release:0.2,cutoff:40+Math.random()*40});
+      if(Math.random()<0.3)playBg('sonic-pi-noise',40+Math.floor(Math.random()*30),1+Math.random()*2,{amp:0.05,attack:0.3,release:1.5,cutoff:30+Math.random()*25});
+      if(Math.random()<0.2)playBg('sonic-pi-beep',80+Math.floor(Math.random()*15),0.05+Math.random()*0.1,{amp:0.035,release:0.1});
+      if(Math.random()<0.15)playBg('sonic-pi-noise',35,2+Math.random()*3,{amp:0.06,attack:1.5,release:2.5,cutoff:28+Math.random()*10});
+    }
+    else if(fx==='noise-burst'){
+      if(Math.random()<0.15){playBg('sonic-pi-noise',60,0.1,{amp:0.08,attack:0.01,release:0.1,cutoff:80+Math.random()*30});spawnParticle(Math.random()*W,Math.random()*H,'#ff6644',2);}
+      if(Math.random()<0.1)playBg('sonic-pi-sc808_clap',60,0.15,{amp:0.15});
+    }
+    else if(fx==='ocean-space'){
+      if(Math.random()<0.25)playBg('sonic-pi-noise',45,4+Math.random()*4,{amp:0.04,attack:2.5,release:4,cutoff:35+Math.random()*10});
+      if(Math.random()<0.15){const sn=88+Math.floor(Math.random()*8);playBg('sonic-pi-pretty_bell',sn,2,{amp:0.04,release:2,pan:(Math.random()-0.5)*1.5});spawnParticle(Math.random()*W,Math.random()*H*0.3,'#cc88ff',1.5);}
+      // Singing bowl shimmer for scene 5
+      if(curScene===5 && Math.random()<0.12)playBg('sonic-pi-dull_bell',pick([64,67,72,76]),4,{amp:0.06,attack:2,release:4});
+    }
+    else if(fx==='space-metal'){
+      if(Math.random()<0.2)playBg('sonic-pi-sc808_cowbell',72+Math.floor(Math.random()*12),0.3,{amp:0.08,pan:(Math.random()-0.5)*1.2});
+      if(Math.random()<0.15){playBg('sonic-pi-pluck',pick([84,86,88,91,93]),0.8,{amp:0.07,release:0.8,pan:(Math.random()-0.5)*1.0});spawnParticle(Math.random()*W,Math.random()*H,'#c0c0c0',2);}
+    }
+
+    if((curScene===3||curScene===4||curScene===5) && Math.random()<0.08)
+      playBg('sonic-pi-noise',60,0.08,{amp:0.03,attack:0.01,release:0.08,cutoff:60+Math.random()*30});
+
+    // Radio signal ticks faster than other FX
+    setT('fx',tick,fx==='radio-signal'?400+Math.random()*800:800+Math.random()*2000);
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 10: SCENE 6 BELL RAIN
+// ============================================================
+function startBellRain(){
+  function tick(){
+    if(curScene===6){
+      if(Math.random()<0.4*densityMod){
+        const note=pick(SCALES[6]);
+        playMel('sonic-pi-pretty_bell',note,1.5+Math.random()*2,{amp:0.08+Math.random()*0.08,release:2,pan:(Math.random()-0.5)*1.2});
+        spawnParticle(Math.random()*W,Math.random()*0.4*H,'#ffd700',3);
+      }
+      if(Math.random()<0.25){
+        playMel('sonic-pi-pluck',pick(SCALES[6]),0.8,{amp:0.1,release:0.8});
+        spawnParticle(Math.random()*W,Math.random()*H,'#c0c0c0',2);
+      }
+    }
+    setT('bellrain',tick,250+Math.random()*500);
+  }
+  tick();
+}
+
+// ============================================================
+// LAYER 11: SCENE 3 GENERATIVE HI-HAT (replaces melody)
+// ============================================================
+function startFormlessHat(){
+  function tick(){
+    if(curScene===3){
+      const r=Math.random();
+      // Generative pattern: varying density, velocity, open/closed mix
+      if(r<0.4){
+        // Closed hi-hat — quiet, ticking
+        playBg('sonic-pi-sc808_closed_hihat',60,0.05,{amp:0.06+Math.random()*0.06});
+      } else if(r<0.5){
+        // Open hi-hat — occasional wash
+        playBg('sonic-pi-sc808_open_hihat',60,0.15,{amp:0.04+Math.random()*0.04});
+      } else if(r<0.55){
+        // Rimshot — rare accent
+        playBg('sonic-pi-sc808_rimshot',60,0.1,{amp:0.05});
+      }
+      // else: silence (45% chance = breathing room)
+
+      // Variable timing: mostly slow, occasional fast cluster
+      const bpm=60;
+      const q=60000/bpm;
+      const rr=Math.random();
+      let next;
+      if(rr<0.4)next=q; // quarter
+      else if(rr<0.65)next=q*2; // half (sparse)
+      else if(rr<0.8)next=q/2; // 8th (denser moment)
+      else if(rr<0.9)next=q/3; // triplet
+      else next=q/4; // 16th burst (rare)
+
+      setT('formlesshat',tick,next*(0.8+Math.random()*0.4));
+    } else {
+      setT('formlesshat',tick,500);
+    }
+  }
+  tick();
+}
+
+// ============================================================
+// START ALL LOOPS
+// ============================================================
+function startAllLoops(){
+  clearAll();
+  startPadChords();
+  startBass();
+  startMelody();
+  startMelodyB();
+  startMel2();
+  startArp();
+  startSparkle();
+  startKick();
+  startFormless();
+  startSoundFX();
+  startBellRain();
+  startFormlessHat();
+}
+
+// ============================================================
+// PLEXUS DRUMS — scene 4 mouse (UNCHANGED)
+// ============================================================
+let mouseX=0.5,mouseY=0.5,prevMouseX=0.5,prevMouseY=0.5,mouseVel=0,lastPlxTime=0;
+document.addEventListener('mousemove',e=>{
+  prevMouseX=mouseX;prevMouseY=mouseY;
+  mouseX=e.clientX/innerWidth;mouseY=1-e.clientY/innerHeight;
+  mouseVel=Math.sqrt((mouseX-prevMouseX)**2+(mouseY-prevMouseY)**2);
+  if(curScene!==4||!started)return;
+  const now=performance.now();
+  if(now-lastPlxTime<50)return;
+  if(mouseVel<0.008)return;
+  lastPlxTime=now;
+  const v=Math.min(mouseVel*12,1);
+  if(mouseY<0.33){
+    play('sonic-pi-sc808_bassdrum',36,0.4,{amp:Math.min(v*1.5,1.0)});
+    play('sonic-pi-hoover',36,0.15,{amp:v*0.4,release:0.15,cutoff:80});
+    spawnParticle(e.clientX,e.clientY,'#ff4444',6+v*20);
+  } else if(mouseY>0.66){
+    play('sonic-pi-sc808_closed_hihat',60,0.1,{amp:v*0.6});
+    if(Math.random()<0.3)play('sonic-pi-sc808_open_hihat',60,0.2,{amp:v*0.5});
+    if(Math.random()<0.2)play('sonic-pi-sc808_cowbell',72,0.15,{amp:v*0.3});
+    spawnParticle(e.clientX,e.clientY,'#ffaa44',3+v*12);
+  } else {
+    play('sonic-pi-sc808_snare',60,0.2,{amp:v*0.8});
+    if(Math.random()<0.4)play('sonic-pi-sc808_clap',60,0.15,{amp:v*0.5});
+    spawnParticle(e.clientX,e.clientY,'#ff8844',5+v*15);
+  }
+  if(mouseVel>0.05){
+    play('sonic-pi-blade',pick(SCALES[4]),0.3,{amp:v*0.25,release:0.3});
+    for(let i=0;i<3;i++)spawnParticle(e.clientX+Math.random()*40-20,e.clientY+Math.random()*40-20,'#ff2222',2);
+  }
+});
+
+// ============================================================
+// PARTICLES
+// ============================================================
+const particles=[];
+function spawnParticle(x,y,color,size){
+  particles.push({x,y,vx:(Math.random()-0.5)*2,vy:-1-Math.random()*2,life:1,decay:0.01+Math.random()*0.02,color,size:size||3+Math.random()*4});
+}
+
+// ============================================================
+// SCENE SWITCH
+// ============================================================
+function setScene(n){
+  if(!started)return;
+  curScene=n;ci=0;
+  const s=SC[n];
+  const scale=SCALES[n];
+  if(scale.length){mP=Math.min(mP,scale.length-1);m2P=Math.min(m2P,scale.length-1);mBP=Math.min(mBP,scale.length-1);}
+  if(!bpmOverride){$('bpmCtrl').value=s.bpm;$('vBpm').textContent=s.bpm;}
+  startAllLoops();
+  $('scene-name').textContent=`#${n} ${s.name} — ${s.nameT}`;
+  const pct=s.energy*10;
+  $('energy-fill').style.width=pct+'%';
+  $('energy-fill').style.background=s.energy>7?'#f44':s.energy>4?'#fa4':s.energy>2?'#48a':'#446';
+  document.querySelectorAll('.sb').forEach((el,i)=>el.classList.toggle('on',i===n));
+  const extra=n===4?' + PLEXUS DRUMS':'';
+  log(`Scene ${n}: ${s.name} | ${s.padSynth.replace('sonic-pi-','')}+${(s.melSynth||'—').replace('sonic-pi-','')}+${(s.melBSynth||'').replace('sonic-pi-','')} | ${getBpm()}bpm${extra}`);
+}
+window._setScene=setScene;
+
+// ============================================================
+// CONTROLS
+// ============================================================
+$('vol').oninput=function(){volScale=this.value/100;$('vVol').textContent=this.value;};
+$('bgVol').oninput=function(){bgScale=this.value/100;$('vBg').textContent=this.value;};
+$('melVol').oninput=function(){melScale=this.value/100;$('vMel').textContent=this.value;};
+$('bpmCtrl').oninput=function(){bpmOverride=+this.value;$('vBpm').textContent=this.value;};
+$('densCtrl').oninput=function(){densityMod=0.3+(this.value/100)*1.7;$('vDens').textContent=this.value;};
+document.addEventListener('keydown',e=>{const n=parseInt(e.key);if(n>=0&&n<=6)setScene(n);});
+
+// ============================================================
+// VISUALS
+// ============================================================
+const stars=[];
+for(let i=0;i<200;i++)stars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.5+0.2,tw:Math.random()*0.015+0.003,a:Math.random()*6.28,br:0.2+Math.random()*0.4});
+
+function draw(){
+  cx.fillStyle='rgba(5,5,16,0.08)';cx.fillRect(0,0,W,H);
+  const e=(SC[curScene]?.energy||5)/10;
+  const col=SC[curScene]?.color||'#448';
+  stars.forEach(s=>{
+    s.a+=s.tw*(1+e*2);
+    const br=Math.max(0,s.br+Math.sin(s.a)*(0.15+e*0.15));
+    cx.fillStyle=`rgba(${150+e*100},${180+e*50},255,${br})`;
+    cx.beginPath();cx.arc(s.x*W,s.y*H,s.r*(1+e*0.5),0,Math.PI*2);cx.fill();
+  });
+  if(curScene===4){
+    cx.fillStyle='rgba(255,68,68,0.04)';cx.fillRect(0,H*0.67,W,H*0.33);
+    cx.fillStyle='rgba(255,170,68,0.04)';cx.fillRect(0,0,W,H*0.33);
+    cx.fillStyle='rgba(255,136,68,0.04)';cx.fillRect(0,H*0.33,W,H*0.34);
+    cx.fillStyle='#ffffff12';cx.font='11px monospace';cx.textAlign='center';
+    cx.fillText('HI-HAT',W/2,H*0.17);cx.fillText('SNARE',W/2,H*0.5);cx.fillText('KICK',W/2,H*0.83);
+    cx.textAlign='left';
+    if(mouseVel>0.003){
+      const mx=mouseX*W,my=(1-mouseY)*H,r=15+mouseVel*150;
+      const gr=cx.createRadialGradient(mx,my,0,mx,my,r);
+      gr.addColorStop(0,'#ff444444');gr.addColorStop(1,'#ff444400');
+      cx.fillStyle=gr;cx.beginPath();cx.arc(mx,my,r,0,Math.PI*2);cx.fill();
+    }
+  }
+  if(curScene===6&&Math.random()<0.06){
+    cx.fillStyle='rgba(255,215,0,0.15)';cx.beginPath();cx.arc(Math.random()*W,Math.random()*H,1+Math.random()*2,0,Math.PI*2);cx.fill();
+  }
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.life-=p.decay;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    cx.globalAlpha=p.life;cx.fillStyle=p.color;
+    cx.beginPath();cx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);cx.fill();
+  }
+  cx.globalAlpha=1;
+}
+function loop(){requestAnimationFrame(loop);draw();}
+requestAnimationFrame(loop);
+
+// ============================================================
+// START
+// ============================================================
+$('info').addEventListener('click',init,{once:true});
+</script>
+</body></html>

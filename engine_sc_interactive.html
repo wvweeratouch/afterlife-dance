@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Afterlife Dance — SC Interactive v5</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:flex;flex-direction:column}
+#bar{padding:5px 10px;background:#0a0a12;border-bottom:1px solid #1a1a2a;display:flex;gap:6px;align-items:center;font-size:10px;z-index:5;flex-wrap:wrap}
+#bar2{padding:4px 10px;background:#08081a;border-bottom:1px solid #1a1a2a;display:flex;gap:6px;align-items:center;font-size:10px;z-index:5;flex-wrap:wrap}
+#bar label,#bar2 label{color:#446;font-size:8px}
+#bar input[type=range],#bar2 input[type=range]{width:50px;height:3px;-webkit-appearance:none;background:#222;border:none;border-radius:2px}
+#bar input[type=range]::-webkit-slider-thumb,#bar2 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:#668;border-radius:50%;cursor:pointer}
+.sb{padding:2px 6px;border:1px solid #333;border-radius:3px;background:#111;color:#888;cursor:pointer;font-size:10px;font-family:monospace}
+.sb.on{background:#224;color:#8af;border-color:#448}
+.btn{padding:2px 6px;border:1px solid #444;border-radius:3px;background:#1a1a2a;color:#888;cursor:pointer;font-size:9px}
+.btn.on{background:#224;color:#8af;border-color:#448}
+#scene-name{color:#8af;font-weight:bold;min-width:80px;font-size:10px}
+#energy-bar{width:50px;height:6px;background:#111;border-radius:3px;overflow:hidden}
+#energy-fill{height:100%;border-radius:3px;transition:width 3s,background 3s}
+#log{position:absolute;bottom:8px;left:12px;color:#335;font-size:10px;max-width:400px;font-family:monospace}
+#info{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#446;font-size:16px;cursor:pointer;z-index:5;text-align:center}
+#info.hide{display:none}
+.badge{display:inline-block;padding:1px 5px;background:#1a1a2e;border:1px solid #333;border-radius:3px;color:#668;font-size:8px;margin-left:4px}
+.ctrl{display:flex;align-items:center;gap:2px}
+.ctrl span{color:#556;font-size:8px;min-width:16px;text-align:right}
+.det{color:#446;font-size:9px}
+.m{height:3px;background:#1a1a1a;border-radius:2px;width:40px}
+.mf{height:100%;border-radius:2px}
+/* Split layout: monitor left, main screen right */
+#stage{flex:1;display:flex;overflow:hidden}
+#monitor{width:35%;min-width:280px;background:#080810;border-right:1px solid #1a1a2a;position:relative;display:flex;flex-direction:column}
+#monitor canvas{flex:1;width:100%}
+#mon-label{position:absolute;top:4px;left:6px;color:#334;font-size:9px;font-family:monospace;z-index:2}
+#main-screen{flex:1;background:#030308;position:relative;display:flex;align-items:center;justify-content:center}
+#main-label{position:absolute;top:4px;right:6px;color:#223;font-size:9px;font-family:monospace}
+#main-border{border:1px dashed #1a1a2a;width:90%;height:90%;display:flex;align-items:center;justify-content:center;color:#1a1a2a;font-size:14px;font-family:monospace}
+</style>
+</head><body>
+<!-- Row 1: Music controls -->
+<div id="bar">
+  <span style="color:#668;font-weight:bold;font-size:10px">SC</span><span class="badge">v5 interactive</span>
+  <div class="ctrl"><label>Vol</label><input type="range" min="0" max="100" value="80" id="vol"><span id="vVol">80</span></div>
+  <div class="ctrl"><label>BG</label><input type="range" min="0" max="100" value="50" id="bgVol"><span id="vBg">50</span></div>
+  <div class="ctrl"><label>MelA</label><input type="range" min="0" max="100" value="70" id="melAVol"><span id="vMelA">70</span></div>
+  <div class="ctrl"><label>MelB</label><input type="range" min="0" max="100" value="70" id="melBVol"><span id="vMelB">70</span></div>
+  <div class="ctrl"><label>BPM</label><input type="range" min="40" max="180" value="72" id="bpmCtrl"><span id="vBpm">72</span></div>
+  <div class="ctrl"><label>Density</label><input type="range" min="0" max="100" value="50" id="densCtrl"><span id="vDens">50</span></div>
+  <span style="color:#222">|</span>
+  <span class="sb" onclick="window._setScene(0)">0</span>
+  <span class="sb" onclick="window._setScene(1)">1</span>
+  <span class="sb" onclick="window._setScene(2)">2</span>
+  <span class="sb" onclick="window._setScene(3)">3</span>
+  <span class="sb" onclick="window._setScene(4)">4</span>
+  <span class="sb" onclick="window._setScene(5)">5</span>
+  <span class="sb" onclick="window._setScene(6)">6</span>
+  <span style="color:#222">|</span>
+  <span id="scene-name">—</span>
+  <div id="energy-bar"><div id="energy-fill" style="width:0%"></div></div>
+</div>
+<!-- Row 2: Detection controls -->
+<div id="bar2">
+  <div class="ctrl"><label>Thresh</label><input type="range" min="5" max="200" value="80" id="threshCtrl"><span id="vThr">80</span></div>
+  <div class="ctrl"><label>Sens</label><input type="range" min="1" max="100" value="50" id="sensCtrl"><span id="vSens">50</span></div>
+  <span class="btn" id="btnCal" onclick="window._calibrate()">Calibrate</span>
+  <span class="btn on" id="btnAuto" onclick="window._toggleAuto()">Auto-Mel ON</span>
+  <span class="btn" id="btnDark" onclick="window._toggleDark()">Dark</span>
+  <span class="btn" id="btnPose" onclick="window._togglePose()">Pose</span>
+  <div class="ctrl"><label>PoseT</label><input type="range" min="1" max="20" value="5" id="poseTCtrl"><span id="vPoseT">0.05</span></div>
+  <div class="ctrl"><label>Trans</label><input type="range" min="500" max="8000" value="2000" id="transCtrl" step="100"><span id="vTrans">2s</span></div>
+  <span style="color:#222">|</span>
+  <span class="det">Blobs:<span id="nB">0</span> Vel:<span id="nVv">0</span> Pose:<span id="nP">off</span> FPS:<span id="nF">0</span></span>
+  <span style="color:#222">|</span>
+  <div class="ctrl"><label>Vel</label><div class="m"><div class="mf" id="mVl" style="background:#ff8844;width:0%"></div></div></div>
+  <span class="det" id="aI">—</span>
+</div>
+<!-- Split: Monitor (left) + Main Screen (right) -->
+<div id="stage">
+  <div id="monitor">
+    <span id="mon-label">MONITOR</span>
+    <canvas id="c"></canvas>
+  </div>
+  <div id="main-screen">
+    <span id="main-label">MAIN SCREEN</span>
+    <div id="main-border">#${0} — visual output here</div>
+  </div>
+</div>
+<div id="info">Click to start SC Interactive v5<br><span style="font-size:11px;color:#335">Camera + Body + SuperCollider WASM</span></div>
+<div id="log"></div>
+
+<script type="module">
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+let W,H;function rz(){const p=cv.parentElement;W=cv.width=p.offsetWidth;H=cv.height=p.offsetHeight-16}rz();onresize=rz;
+const $=id=>document.getElementById(id);
+const Z=(id,f)=>{const e=$(id);if(f!==undefined)e.classList.toggle('on',!!f);else e.classList.toggle('on')};
+const log=m=>{$('log').textContent=m;console.log(m)};
+
+// ============================================================
+// STATE
+// ============================================================
+const G={thresh:80,sens:50,dark:false,dbg:true,mpOn:false,autoMel:true,poseThresh:0.05};
+let bodyDetected=false, lastBodyTime=0;
+const BODY_TIMEOUT=3000; // ms before auto-melody fades back
+
+// ============================================================
+// SUPERSONIC
+// ============================================================
+import { SuperSonic } from "https://unpkg.com/supersonic-scsynth@latest";
+
+let sonic=null, started=false, curScene=0, nodeId=1000;
+let volScale=0.8, bgScale=0.5, melAScale=0.7, melBScale=0.7, melScale=0.7, densityMod=1.0, bpmOverride=null;
+let autoMelScale=1.0; // fades between 0-1 based on body detection
+let transitionTime=2000; // ms for scene crossfade
+
+async function init(){
+  log('Initializing SuperCollider WASM...');
+  sonic=new SuperSonic({
+    baseURL:"https://unpkg.com/supersonic-scsynth@latest/dist/",
+    coreBaseURL:"https://unpkg.com/supersonic-scsynth-core@latest/",
+    sampleBaseURL:"https://unpkg.com/supersonic-scsynth-samples@latest/samples/",
+    synthdefBaseURL:"https://unpkg.com/supersonic-scsynth-synthdefs@latest/synthdefs/",
+  });
+  await sonic.init();
+  log('Loading SynthDefs...');
+  const defs=[
+    'prophet','dark_ambience','hollow','blade','pretty_bell','dull_bell',
+    'pluck','kalimba','piano','growl','hoover','tb303','organ_tonewheel',
+    'rhodey','fm','saw','noise','beep','supersaw',
+    'zawa','mod_sine','mod_fm','dsaw','dtri','recorder','bass_foundation','tech_saws',
+    'sc808_bassdrum','sc808_snare','sc808_closed_hihat','sc808_open_hihat',
+    'sc808_clap','sc808_cowbell','sc808_cymbal','sc808_rimshot',
+    'fx_reverb','fx_echo','fx_gverb',
+  ];
+  await Promise.all(defs.map(d=>sonic.loadSynthDef('sonic-pi-'+d)));
+  log('SC ready. Starting camera...');
+  started=true;
+  $('info').classList.add('hide');
+  // Auto-enable pose on init
+  G.mpOn=true;Z('btnPose',true);loadMP();
+  startCam();
+  startAllLoops();
+  setScene(0);
+}
+
+// ============================================================
+// PLAY — per-synth gain compensation
+// ============================================================
+const SYNTH_GAIN={
+  'sonic-pi-supersaw':0.35,'sonic-pi-tech_saws':0.5,'sonic-pi-prophet':0.5,
+  'sonic-pi-hoover':0.55,'sonic-pi-blade':0.6,'sonic-pi-dsaw':0.6,
+  'sonic-pi-dark_ambience':1.8,'sonic-pi-hollow':2.0,'sonic-pi-dull_bell':1.1,
+  'sonic-pi-pretty_bell':1.0,'sonic-pi-pluck':1.2,'sonic-pi-kalimba':1.1,
+  'sonic-pi-piano':1.0,'sonic-pi-rhodey':0.9,'sonic-pi-fm':0.8,
+  'sonic-pi-zawa':1.3,'sonic-pi-mod_sine':1.4,'sonic-pi-mod_fm':0.9,
+  'sonic-pi-recorder':1.1,'sonic-pi-dtri':1.2,'sonic-pi-beep':1.0,
+  'sonic-pi-tb303':0.7,'sonic-pi-growl':0.8,'sonic-pi-bass_foundation':0.9,
+  'sonic-pi-organ_tonewheel':0.8,'sonic-pi-noise':1.0,'sonic-pi-saw':0.7,
+};
+function synthGain(s){return SYNTH_GAIN[s]||1.0;}
+function nid(){return nodeId++}
+function play(synth,note,dur,p={}){
+  if(!sonic||!started)return;
+  const id=nid();
+  const amp=(p.amp||0.3)*volScale*synthGain(synth);
+  const args=['note',note,'sustain',dur,'amp',amp];
+  if(p.cutoff)args.push('cutoff',p.cutoff);
+  if(p.release!=null)args.push('release',p.release);
+  if(p.attack!=null)args.push('attack',p.attack);
+  if(p.pan!=null)args.push('pan',p.pan);
+  if(p.res)args.push('res',p.res);
+  sonic.send('/s_new',synth,id,0,0,...args);
+}
+function playBg(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*bgScale});}
+function playMelA(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale});}
+function playMelB(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melBScale});}
+function playMel(synth,note,dur,p={}){play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale});}
+// Auto-melody: scaled by autoMelScale (fades when body detected), routed through melA
+function playAutoMel(synth,note,dur,p={}){
+  if(!G.autoMel&&!bodyDetected)return;
+  const sc=bodyDetected?Math.max(0.15,1-autoMelScale):autoMelScale;
+  play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale*sc});
+}
+// Auto-melody B line: routed through melB
+function playAutoMelB(synth,note,dur,p={}){
+  if(!G.autoMel&&!bodyDetected)return;
+  const sc=bodyDetected?Math.max(0.15,1-autoMelScale):autoMelScale;
+  play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melBScale*sc});
+}
+// Interactive melody: only when body detected
+function playInterMel(synth,note,dur,p={}){
+  if(!bodyDetected&&!G.mpOn)return;
+  play(synth,note,dur,{...p,amp:(p.amp||0.3)*melScale*melAScale});
+}
+function getBpm(){return bpmOverride||SC[curScene].bpm}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+
+// ============================================================
+// SCALES & CHORDS
+// ============================================================
+const SCALES={
+  0:[57,60,62,64,67],
+  1:[60,62,64,67,69,72,74,76],
+  2:[57,60,64,67,69,72,76],
+  3:[],
+  4:[57,60,62,64,67,69,72,74,76,79,81,84],
+  5:[57,58,60,61,64,65,69,70,72],  // Saba mid: A3 Bb3 C4 Db4 E4 F4 A4 Bb4 C5
+  6:[72,74,76,79,81,83,84,86,88,91],  // Brazilian Lydian b7
+};
+const BELLS=[72,74,76,79,81,84,86,88];
+
+const CH={
+  0:[[45,52,57],[50,57,62],[52,59,64],[45,52,57]],
+  1:[[57,60,64,69,72],[53,57,60,65,69],[55,59,62,67,71],[52,55,59,64,67],[50,53,57,62,65]],
+  2:[[57,64,69,76],[60,67,72,79],[62,69,74,81],[64,71,76,83]],
+  3:[[33,45],[28,40],[26,38],[33,45]],
+  4:[[33,45,52,57,64],[38,50,57,62,69],[40,52,59,64,71],[43,55,62,67,74],[41,53,60,65,72]],
+  5:[[45,57,64,69],[41,53,61,65],[45,60,65,72],[43,57,64,70]],
+  6:[[60,64,67,72,76],[57,60,65,69,74],[55,59,62,67,71],[60,64,67,72,76]],
+};
+
+// ============================================================
+// SCENES
+// ============================================================
+const SC=[
+  {name:'Summoning',nameT:'เรียกขวัญ',energy:2,color:'#445',det:'off',
+   padSynth:'sonic-pi-dark_ambience',melSynth:'sonic-pi-kalimba',melBSynth:'sonic-pi-piano',
+   mel2Synth:null,bassSynth:'sonic-pi-bass_foundation',arpSynth:null,
+   bpm:72,padAmp:0.35,melAmp:0.18,melBAmp:0.07,mel2Amp:0,bassAmp:0.15,
+   sparkleP:0,kick:true,kickRate:2000,release:6,attack:3,cutoff:80,
+   breathRate:0.12,breathAmp:0.1,fxType:'wind',
+   intSynth:'sonic-pi-kalimba',intAmp:0.2},
+
+  {name:'Formation',nameT:'ขวัญ gathering',energy:8,color:'#4488ff',det:'blob',
+   padSynth:'sonic-pi-prophet',melSynth:'sonic-pi-rhodey',melBSynth:'sonic-pi-kalimba',
+   mel2Synth:'sonic-pi-fm',bassSynth:'sonic-pi-tb303',arpSynth:'sonic-pi-kalimba',
+   bpm:108,padAmp:0.32,melAmp:0.28,melBAmp:0.15,mel2Amp:0.14,bassAmp:0.12,
+   sparkleP:0.2,kick:false,kickRate:0,release:3,attack:1,cutoff:100,
+   breathRate:0.18,breathAmp:0.2,fxType:null,
+   intSynth:'sonic-pi-pretty_bell',intAmp:0.2},
+
+  {name:'Binary',nameT:'หิง-ขวัญ',energy:6,color:'#44aa88',det:'blob',
+   padSynth:'sonic-pi-dull_bell',melSynth:'sonic-pi-pluck',melBSynth:'sonic-pi-pretty_bell',
+   mel2Synth:'sonic-pi-pretty_bell',bassSynth:'sonic-pi-bass_foundation',arpSynth:'sonic-pi-pluck',
+   bpm:100,padAmp:0.32,melAmp:0.35,melBAmp:0.12,mel2Amp:0.14,bassAmp:0.12,
+   sparkleP:0.15,kick:true,kickRate:1800,release:2.5,attack:0.5,cutoff:90,
+   breathRate:0.22,breathAmp:0.18,fxType:'bird',
+   intSynth:'sonic-pi-pluck',intAmp:0.2},
+
+  {name:'Formless',nameT:'ร่างเสมือน',energy:1,color:'#886644',det:'off',
+   padSynth:'sonic-pi-hollow',melSynth:null,melBSynth:null,
+   mel2Synth:null,bassSynth:'sonic-pi-dark_ambience',arpSynth:null,
+   bpm:60,padAmp:0.6,melAmp:0,melBAmp:0,mel2Amp:0,bassAmp:0.3,
+   sparkleP:0,kick:false,kickRate:0,release:8,attack:3,cutoff:75,
+   breathRate:0.08,breathAmp:0.25,fxType:'radio-signal',
+   intSynth:null,intAmp:0},
+
+  {name:'Supernova',nameT:'ขวัญหนี',energy:10,color:'#ff4444',det:'blob+pose',
+   padSynth:'sonic-pi-supersaw',melSynth:null,melBSynth:null,
+   mel2Synth:null,bassSynth:'sonic-pi-hoover',arpSynth:null,
+   bpm:138,padAmp:0.35,melAmp:0,melBAmp:0,mel2Amp:0,bassAmp:0.15,
+   sparkleP:0,kick:true,kickRate:435,release:0.8,attack:0.05,cutoff:120,
+   breathRate:0.3,breathAmp:0.08,fxType:'noise-burst',
+   intSynth:null,intAmp:0}, // plexus drums handled separately
+
+  {name:'Collapse',nameT:'ส่งขวัญขึ้นฟ้า',energy:3,color:'#884488',det:'blob',
+   padSynth:'sonic-pi-pretty_bell',melSynth:'sonic-pi-piano',melBSynth:'sonic-pi-rhodey',
+   mel2Synth:null,bassSynth:'sonic-pi-beep',arpSynth:null,
+   bpm:80,padAmp:0.25,melAmp:0.25,melBAmp:0.15,mel2Amp:0,bassAmp:0.08,
+   sparkleP:0.1,kick:false,kickRate:0,release:6,attack:2,cutoff:90,
+   breathRate:0.1,breathAmp:0.22,fxType:'ocean-space',
+   intSynth:'sonic-pi-piano',intAmp:0.15},
+
+  {name:'Distribute',nameT:'cyclical · bells',energy:4,color:'#ffd700',det:'blob',
+   padSynth:'sonic-pi-dull_bell',melSynth:'sonic-pi-pretty_bell',melBSynth:'sonic-pi-pluck',
+   mel2Synth:'sonic-pi-pluck',bassSynth:'sonic-pi-bass_foundation',arpSynth:'sonic-pi-pretty_bell',
+   bpm:96,padAmp:0.3,melAmp:0.22,melBAmp:0.14,mel2Amp:0.14,bassAmp:0.12,
+   sparkleP:0.18,kick:true,kickRate:1250,release:3,attack:1.5,cutoff:95,
+   breathRate:0.15,breathAmp:0.18,fxType:'space-metal',
+   intSynth:'sonic-pi-pretty_bell',intAmp:0.18},
+];
+
+// ============================================================
+// WALKER
+// ============================================================
+let ci=0,mP=2,mD=1,m2P=4,m2D=-1,mBP=3,mBD=-1;
+function walk(p,d,sc,restP=0){
+  if(!sc||!sc.length)return[0,1,false];
+  if(Math.random()<restP)return[p,d,false];
+  const old=p;
+  for(let i=0;i<6;i++){
+    let np=p,nd=d;const r=Math.random();
+    if(r<.35)np+=nd;else if(r<.55)np+=nd*2;else if(r<.7){nd*=-1;np+=nd;}
+    else if(r<.85)np+=Math.round(Math.random()*2)-1;
+    else np=Math.floor(Math.random()*sc.length);
+    if(np>=sc.length){np=sc.length-2;nd=-1;}if(np<0){np=1;nd=1;}
+    if(np!==old)return[np,nd,true];
+  }
+  return[(p+1)%sc.length,d,true];
+}
+
+// ============================================================
+// TIMERS
+// ============================================================
+const T={};
+function setT(name,fn,ms){T[name]=setTimeout(fn,ms);}
+function clearAll(){Object.keys(T).forEach(k=>{clearTimeout(T[k]);delete T[k];})}
+
+// ============================================================
+// RHYTHM
+// ============================================================
+function melRhythm(scene,bpm){
+  const q=60000/bpm,e=q/2,s=q/4,t=q/3;
+  const r=Math.random();
+  if(scene===0){
+    if(r<0.4)return{dur:4,next:q*4+Math.random()*q*2};
+    if(r<0.7)return{dur:2,next:q*2+Math.random()*q*2};
+    if(r<0.9)return{dur:3,next:q*3};
+    return{dur:1,next:q*1.5};
+  }
+  if(scene===1){
+    if(r<0.35)return{dur:1,next:q};if(r<0.6)return{dur:0.5,next:e};
+    if(r<0.75)return{dur:0.75,next:e*1.5};if(r<0.85)return{dur:0.3,next:s};
+    if(r<0.95)return{dur:0.5,next:t};return{dur:0.3,next:e+s};
+  }
+  if(scene===2){
+    if(r<0.3)return{dur:1,next:q*0.4};if(r<0.55)return{dur:1.5,next:q*2.5};
+    if(r<0.7)return{dur:1,next:q*1.5};if(r<0.8)return{dur:2,next:q*3};
+    if(r<0.9)return{dur:0.75,next:t};return{dur:0.5,next:e};
+  }
+  if(scene===5){
+    if(r<0.3)return{dur:3,next:q*3+Math.random()*q};if(r<0.5)return{dur:2,next:q*2+Math.random()*q};
+    if(r<0.65)return{dur:4,next:q*4};if(r<0.8)return{dur:1.5,next:q*1.5};
+    if(r<0.88)return{dur:0.15,next:s};if(r<0.96)return{dur:0.5,next:t};
+    return{dur:2,next:q*2.5};
+  }
+  if(scene===6){
+    if(r<0.4)return{dur:0.5,next:e};if(r<0.6)return{dur:0.75,next:e};
+    if(r<0.75)return{dur:1,next:q};if(r<0.87)return{dur:0.3,next:s};
+    if(r<0.95)return{dur:0.5,next:t};return{dur:0.3,next:s*3};
+  }
+  if(r<0.5)return{dur:1,next:q};if(r<0.7)return{dur:0.5,next:e};
+  if(r<0.85)return{dur:1.5,next:q*1.5};if(r<0.93)return{dur:0.3,next:s};
+  return{dur:0.5,next:t};
+}
+
+// ============================================================
+// CAMERA + BLOB DETECTION
+// ============================================================
+let video,blobs=[],prevBlobs=[],sVel=0;
+let bgFrame=null; // calibration background
+const oC=document.createElement('canvas');oC.width=80;oC.height=60;
+const oX=oC.getContext('2d',{willReadFrequently:true});
+
+async function startCam(){try{
+  const st=await navigator.mediaDevices.getUserMedia({video:{width:320,height:240}});
+  video=document.createElement('video');video.srcObject=st;await video.play();
+  setInterval(doDetect,200);
+  log('Camera started.');
+}catch(e){log('No camera: '+e.message);}}
+
+function calibrate(){
+  if(!video||!video.videoWidth)return;
+  oX.drawImage(video,0,0,80,60);
+  bgFrame=oX.getImageData(0,0,80,60);
+  log('Calibrated — background captured');
+  $('btnCal').textContent='Recalibrate';
+}
+window._calibrate=calibrate;
+
+function doDetect(){
+  if(!video||!video.videoWidth||!started)return;
+  // Always run MediaPipe when enabled (regardless of scene detection mode)
+  if(G.mpOn)runMP();
+  const s=SC[curScene];
+  if(s.det==='off'){blobs=[];prevBlobs=[];$('nB').textContent=0;return;}
+  prevBlobs=[...blobs];
+  oX.drawImage(video,0,0,80,60);
+  const fd=oX.getImageData(0,0,80,60);
+  const sensScale=G.sens/50; // 0.02 to 2.0
+  const pts=[];
+
+  if(bgFrame){
+    // Calibrated mode: detect difference from background
+    const bg=bgFrame.data;
+    for(let y=0;y<60;y+=3)for(let x=0;x<80;x+=3){
+      const i=(y*80+x)*4;
+      const diff=Math.abs(fd.data[i]-bg[i])+Math.abs(fd.data[i+1]-bg[i+1])+Math.abs(fd.data[i+2]-bg[i+2]);
+      if(diff>G.thresh*sensScale)pts.push({x:x/80,y:y/60,br:diff/765});
+    }
+  } else {
+    // Raw brightness mode (before calibration)
+    const thr=G.dark?25+(100-G.sens)*0.3:G.thresh;
+    for(let y=0;y<60;y+=3)for(let x=0;x<80;x+=3){
+      const i=(y*80+x)*4;
+      const br=(fd.data[i]+fd.data[i+1]+fd.data[i+2])/3;
+      if(br>thr)pts.push({x:x/80,y:y/60,br:br/255});
+    }
+  }
+
+  // Cluster
+  const cl=[],u=new Set();
+  for(let i=0;i<pts.length;i++){if(u.has(i))continue;
+    let bx=pts[i].x,by=pts[i].y,bb=pts[i].br,n=1;u.add(i);
+    for(let j=i+1;j<pts.length;j++){if(u.has(j))continue;
+      if(Math.abs(pts[j].x-bx/n)<0.1&&Math.abs(pts[j].y-by/n)<0.1){
+        bx+=pts[j].x;by+=pts[j].y;bb=Math.max(bb,pts[j].br);n++;u.add(j);}}
+    cl.push({x:bx/n,y:by/n,br:bb,sz:n});}
+  blobs=cl.sort((a,b)=>b.sz-a.sz).slice(0,10);
+
+  // Velocity
+  let v=0,nm=Math.min(blobs.length,prevBlobs.length);
+  for(let i=0;i<nm;i++)v+=Math.sqrt((blobs[i].x-prevBlobs[i].x)**2+(blobs[i].y-prevBlobs[i].y)**2);
+  sVel=sVel*0.7+(nm>0?v/nm:0)*0.3;
+
+  // Body detection state
+  if(blobs.length>0){bodyDetected=true;lastBodyTime=performance.now();}
+  else if(performance.now()-lastBodyTime>BODY_TIMEOUT){bodyDetected=false;}
+
+  // Auto-melody crossfade
+  if(bodyDetected)autoMelScale=Math.max(0.15,autoMelScale-0.05);
+  else autoMelScale=Math.min(1,autoMelScale+0.02);
+
+  // UI
+  $('nB').textContent=blobs.length;
+  $('nVv').textContent=sVel.toFixed(3);
+  $('mVl').style.width=Math.min(sVel*1000,100)+'%';
+
+  // Trigger interactive sounds
+  trigInteractive();
+
+  // MediaPipe already called at top of doDetect
+}
+
+// ============================================================
+// MEDIAPIPE
+// ============================================================
+let mpObj=null,pose=null,prevPose=null,poseH=[];
+async function loadMP(){if(mpObj)return;$('nP').textContent='loading...';try{
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js';
+  s.crossOrigin='anonymous';document.head.appendChild(s);
+  await new Promise((r,j)=>{s.onload=r;s.onerror=j;});
+  mpObj=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}`});
+  mpObj.setOptions({modelComplexity:0,smoothLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+  mpObj.onResults(r=>{
+    if(r.poseLandmarks){prevPose=pose;pose={lm:r.poseLandmarks,t:performance.now()};
+      poseH.push(pose);if(poseH.length>15)poseH.shift();$('nP').textContent='33pts';
+    }else{pose=null;$('nP').textContent='lost';}
+  });
+  $('nP').textContent='ready';
+}catch(e){$('nP').textContent='fail';}}
+async function runMP(){if(!mpObj||!video)return;try{await mpObj.send({image:video});}catch(e){}}
+
+// ============================================================
+// RAW WEB AUDIO DRUMS — CEING style, bypasses SC for speed
+// ============================================================
+let plxCtx=null;
+function getPlxCtx(){
+  if(!plxCtx&&sonic)plxCtx=sonic.audioContext||new AudioContext();
+  return plxCtx;
+}
+function plxKick(v){
+  const ctx=getPlxCtx();if(!ctx)return;const t=ctx.currentTime;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+0.12);
+  g.gain.setValueAtTime(Math.min(v*0.7,0.8)*volScale,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+  o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.35);
+}
+function plxSnare(v){
+  const ctx=getPlxCtx();if(!ctx)return;const t=ctx.currentTime;
+  const b=ctx.createBuffer(1,ctx.sampleRate*0.12,ctx.sampleRate);
+  const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const s=ctx.createBufferSource();s.buffer=b;
+  const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=3000;
+  const ng=ctx.createGain();ng.gain.setValueAtTime(Math.min(v*0.35,0.4)*volScale,t);ng.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+  s.connect(f);f.connect(ng);ng.connect(ctx.destination);
+  const o=ctx.createOscillator(),og=ctx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(200,t);o.frequency.exponentialRampToValueAtTime(80,t+0.05);
+  og.gain.setValueAtTime(Math.min(v*0.45,0.5)*volScale,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+  o.connect(og);og.connect(ctx.destination);
+  s.start(t);s.stop(t+0.15);o.start(t);o.stop(t+0.12);
+}
+function plxHiHat(v){
+  const ctx=getPlxCtx();if(!ctx)return;const t=ctx.currentTime;
+  const b=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate);
+  const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const s=ctx.createBufferSource();s.buffer=b;
+  const f=ctx.createBiquadFilter();f.type='highpass';f.frequency.value=7000;
+  const g=ctx.createGain();g.gain.setValueAtTime(Math.min(v*0.35,0.5)*volScale,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+  s.connect(f);f.connect(g);g.connect(ctx.destination);s.start(t);s.stop(t+0.08);
+}
+
+// ============================================================
+// 60FPS POSE TRIGGER — scene-aware: drums on scene 4, melody on others
+// ============================================================
+let lastPlx=0, poseVel=0;
+function trigPlexus60fps(){
+  if(!pose||!prevPose)return;
+  const now=performance.now();
+
+  // Compute max joint velocity across key body joints
+  const js=[11,12,13,14,15,16,23,24,25,26,27,28];
+  let mx=0;
+  js.forEach(j=>{
+    const c=pose.lm[j],p=prevPose.lm[j];
+    const v=Math.sqrt((c.x-p.x)**2+(c.y-p.y)**2);
+    if(v>mx)mx=v;
+  });
+
+  poseVel=poseVel*0.8+mx*0.2;
+
+  const velThresh=G.poseThresh;
+  if(poseVel<velThresh)return;
+
+  const speedNorm=Math.min((poseVel-velThresh)/0.06,1);
+  const retrigger=200-(200-40)*speedNorm;
+  if(now-lastPlx<retrigger)return;
+  lastPlx=now;
+
+  const v=Math.min(speedNorm*1.2,1);
+
+  if(curScene===4){
+    // Scene 4: velocity → drum type
+    if(poseVel<0.02){plxKick(v);}
+    else if(poseVel<0.045){plxSnare(v);}
+    else{plxHiHat(v);if(Math.random()<0.4)plxSnare(v*0.4);}
+  }else{
+    // All other scenes: pose velocity → interactive melody
+    const s=SC[curScene],scale=SCALES[curScene];
+    if(s.intSynth&&scale&&scale.length){
+      const note=scale[Math.floor(Math.random()*scale.length)];
+      playInterMel(s.intSynth,note,0.8+v*1.5,{amp:(s.intAmp||0.15)*(0.4+v*0.6),release:1+v,pan:(Math.random()-0.5)*1.0});
+    }
+  }
+
+  // Visual at fastest joint position
+  const fj=pose.lm[js[0]];
+  spawnParticle(fj.x*W,fj.y*H,SC[curScene].color,2+v*12);
+}
+
+// ============================================================
+// INTERACTIVE TRIGGERS — body → sound (called from detection at 5fps)
+// ============================================================
+let lastB=0;
+function trigInteractive(){
+  if(!started||blobs.length===0)return;
+  const now=performance.now(),b=blobs[0],si=curScene;
+  const s=SC[si],scale=SCALES[si];
+  const bv=prevBlobs[0]?Math.sqrt((b.x-prevBlobs[0].x)**2+(b.y-prevBlobs[0].y)**2):0;
+  const sensScale=G.sens/50;
+  let info='';
+
+  // ── Scene 1: bells on movement ──
+  if(si===1&&bv>0.01*sensScale&&now-lastB>250/sensScale){lastB=now;
+    const note=BELLS[Math.floor(b.y*(BELLS.length-1))];
+    playInterMel(s.intSynth,note,1.5,{amp:s.intAmp*(0.5+bv*5),release:1.5,pan:(b.x-0.5)*1.5});
+    // Multi-blob bells
+    for(let i=1;i<Math.min(blobs.length,4);i++){if(!prevBlobs[i])continue;
+      const vi=Math.sqrt((blobs[i].x-prevBlobs[i].x)**2+(blobs[i].y-prevBlobs[i].y)**2);
+      if(vi>0.012&&Math.random()<0.3)playInterMel(s.intSynth,BELLS[Math.floor(blobs[i].y*(BELLS.length-1))],1,{amp:s.intAmp*0.5,release:1,pan:(blobs[i].x-0.5)*1.5});}
+    info='bell';spawnParticle(b.x*W,b.y*H,s.color,4+bv*40);
+  }
+
+  // ── Scene 2: harp pairs ──
+  if(si===2&&bv>0.008*sensScale&&now-lastB>300/sensScale){lastB=now;
+    const idx=Math.floor(b.y*(scale.length-1));
+    const note=scale[idx];
+    const jump=pick([2,3,4]);
+    const partner=scale[Math.min(idx+jump,scale.length-1)];
+    playInterMel(s.intSynth,note,1.2,{amp:s.intAmp*(0.5+bv*4),release:1.5,pan:(b.x-0.5)*1.2});
+    setTimeout(()=>playInterMel(s.intSynth,partner,1,{amp:s.intAmp*0.6,release:1.2,pan:(b.x-0.5)*-0.8}),150);
+    info='harp pair';spawnParticle(b.x*W,b.y*H,s.color,4+bv*30);
+  }
+
+  // Scene 4: handled by trigPlexus60fps() in draw loop
+  if(si===4){info='plexus poseVel:'+poseVel.toFixed(4)+' blobVel:'+sVel.toFixed(3);}
+
+  // ── Scene 5: floating notes ──
+  if(si===5&&bv>0.008*sensScale&&now-lastB>200/sensScale){lastB=now;
+    const note=scale[Math.floor(b.y*(scale.length-1))];
+    playInterMel(s.intSynth,note,2,{amp:s.intAmp*(0.4+bv*3),release:2,pan:(b.x-0.5)*1.2});
+    info='float';spawnParticle(b.x*W,b.y*H,s.color,3+bv*25);
+  }
+
+  // ── Scene 6: multi-blob chimes ──
+  if(si===6){blobs.forEach((bl,i)=>{if(i>5||!prevBlobs[i])return;
+    const vi=Math.sqrt((bl.x-prevBlobs[i].x)**2+(bl.y-prevBlobs[i].y)**2);
+    if(vi>0.008*sensScale&&Math.random()<0.2){
+      const note=scale[Math.floor(bl.y*(scale.length-1))];
+      playInterMel(s.intSynth,note,1.5,{amp:s.intAmp*(0.3+vi*3),release:1.5,pan:(bl.x-0.5)*1.4});
+      spawnParticle(bl.x*W,bl.y*H,s.color,3);
+    }});info=blobs.length+' chimes';}
+
+  $('aI').textContent=info||s.det;
+}
+
+// ============================================================
+// ALL GENERATIVE LOOPS (same as v4 but using playAutoMel)
+// ============================================================
+function nextChordIdx(pci,len){
+  const r=Math.random();
+  if(r<0.40)return(pci+1)%len; // next sequential
+  if(r<0.65)return(pci+1+Math.floor(Math.random()*2))%len; // skip 1-2
+  if(r<0.85)return pci; // repeat current
+  return Math.floor(Math.random()*len); // random
+}
+function startPadChords(){
+  let pci=0;
+  function tick(){
+    const s=SC[curScene],chords=CH[curScene],ch=chords[pci%chords.length];
+    const breathMod=curScene===4?1:1+Math.sin(performance.now()*s.breathRate*0.001*Math.PI*2)*s.breathAmp;
+    if(curScene===0){
+      if(Math.random()>0.3)pci=nextChordIdx(pci,chords.length);
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release+2,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release+2}),i*50));
+      setT('pad',tick,3500+Math.random()*3000);
+    }else if(curScene===1){
+      pci=nextChordIdx(pci,chords.length);ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*30));
+      if(Math.random()<0.2)setTimeout(()=>ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release*0.5,{amp:s.padAmp*0.6,attack:0.1,cutoff:s.cutoff,release:s.release*0.5}),i*20)),500);
+      setT('pad',tick,2000+Math.random()*3000);
+    }else if(curScene===2){
+      pci=nextChordIdx(pci,chords.length);const ch2=chords[pci%chords.length];
+      ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*30));
+      setTimeout(()=>{ch2.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release*0.7,{amp:s.padAmp*breathMod*0.8,attack:s.attack*0.5,cutoff:s.cutoff,release:s.release*0.7}),i*30));pci=nextChordIdx(pci,chords.length);},400);
+      setT('pad',tick,3500+Math.random()*3000);
+    }else if(curScene===3){
+      pci=nextChordIdx(pci,chords.length);ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*80));
+      setT('pad',tick,3000+Math.random()*3000);
+    }else if(curScene===4){
+      pci=nextChordIdx(pci,chords.length);
+      const ch4=chords[pci%chords.length];
+      ch4.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*15));
+      setT('pad',tick,1000+Math.random()*1500);
+    }else if(curScene===5){
+      pci=nextChordIdx(pci,chords.length);const ch5=chords[pci%chords.length];
+      const nc=2+Math.floor(Math.random()*Math.min(3,ch5.length));
+      const shuf=[...ch5].sort(()=>Math.random()-0.5).slice(0,nc);
+      shuf.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod*(0.7+Math.random()*0.3),attack:s.attack+Math.random()*2,cutoff:s.cutoff,release:s.release}),i*500+Math.random()*800));
+      if(Math.random()<0.35)playBg('sonic-pi-zawa',ch5[Math.floor(Math.random()*ch5.length)],5,{amp:0.08,attack:2,release:5,cutoff:70});
+      setT('pad',tick,6000+Math.random()*6000);
+    }else if(curScene===6){
+      pci=nextChordIdx(pci,chords.length);ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack*0.3,cutoff:s.cutoff,release:s.release,pan:(i/ch.length-0.5)*1.0}),i*100));
+      setT('pad',tick,1800+Math.random()*1500);
+    }else{
+      pci=nextChordIdx(pci,chords.length);ch.forEach((n,i)=>setTimeout(()=>playBg(s.padSynth,n,s.release,{amp:s.padAmp*breathMod,attack:s.attack,cutoff:s.cutoff,release:s.release}),i*30));
+      setT('pad',tick,s.release*1000+1000);
+    }
+  }
+  tick();
+}
+
+function startBass(){
+  function tick(){const s=SC[curScene];
+    if(s.bassSynth){const ch=CH[curScene][ci%CH[curScene].length];
+      playBg(s.bassSynth,ch[0],s.release*0.8,{amp:s.bassAmp,attack:s.attack*0.5,cutoff:70,release:s.release*0.8});}
+    setT('bass',tick,3000+Math.random()*3000);
+  }tick();
+}
+
+function startMelody(){
+  function tick(){const s=SC[curScene],scale=SCALES[curScene],bpm=getBpm();
+    if(scale.length&&s.melSynth){
+      if(Math.random()>0.3/densityMod){
+        const[p,d,ok]=walk(mP,mD,scale);mP=p;mD=d;
+        if(ok){const r=melRhythm(curScene,bpm);
+          if(curScene===2){
+            playAutoMel(s.melSynth,scale[mP],r.dur,{amp:s.melAmp,release:r.dur*1.5,pan:(Math.random()-0.5)*0.8});
+            const jump=pick([2,3,4]),partner=Math.min(mP+jump,scale.length-1);
+            setTimeout(()=>playAutoMel(s.melSynth,scale[partner],r.dur*0.8,{amp:s.melAmp*0.65,release:r.dur,pan:(Math.random()-0.5)*0.8}),150+Math.random()*150);
+          }else{
+            playAutoMel(s.melSynth,scale[mP],r.dur,{amp:s.melAmp,release:r.dur,pan:(Math.random()-0.5)*0.8});
+          }
+          if((curScene===1||curScene===2||curScene===5||curScene===6)&&Math.random()<0.2){
+            const gn=scale[Math.min(mP+1,scale.length-1)];
+            playAutoMel(s.melSynth,gn,0.08,{amp:s.melAmp*0.35,release:0.1});}
+          setT('mel',tick,r.next*(0.9+Math.random()*0.2));return;
+        }}}
+    setT('mel',tick,(60000/bpm)*(0.8+Math.random()*0.4));
+  }tick();
+}
+
+function startMelodyB(){
+  function tick(){const s=SC[curScene],scale=SCALES[curScene],bpm=getBpm();
+    if(scale.length&&s.melBSynth&&s.melBAmp>0){
+      if(Math.random()>0.35/densityMod){
+        const[p,d,ok]=walk(mBP,mBD,scale,0.15);mBP=p;mBD=d;
+        if(ok){const r=melRhythm(curScene,bpm);
+          let note=scale[mBP];if(curScene===0)note+=12;
+          const dur=curScene===1?Math.min(r.dur,0.3):curScene===5?r.dur*3:r.dur;
+          playAutoMelB(s.melBSynth,note,dur,{amp:s.melBAmp,release:dur,pan:(Math.random()-0.5)*1.0});
+          setT('melB',tick,r.next*(1.1+Math.random()*0.4));return;
+        }}}
+    setT('melB',tick,(60000/bpm)*(1.0+Math.random()*0.6));
+  }tick();
+}
+
+function startMel2(){
+  function tick(){const s=SC[curScene],scale=SCALES[curScene];
+    if(s.mel2Synth&&scale.length){
+      const[p,d,ok]=walk(m2P,m2D,scale,0.3);m2P=p;m2D=d;
+      if(ok&&Math.random()<0.6*densityMod){const dur=pick([1,1.5,2]);
+        playAutoMel(s.mel2Synth,scale[m2P],dur,{amp:s.mel2Amp,release:dur,pan:(Math.random()-0.5)*0.6});
+        if(curScene===2&&Math.random()<0.4)setTimeout(()=>playAutoMel('sonic-pi-pretty_bell',scale[m2P]+12,1.5,{amp:0.08,release:1.5,pan:(Math.random()-0.5)*1.0}),200+Math.random()*300);
+      }}
+    setT('mel2',tick,(60000/getBpm()*2)*(0.8+Math.random()*0.4));
+  }tick();
+}
+
+function startArp(){
+  let ai=0;
+  function tick(){const s=SC[curScene];
+    if(s.arpSynth&&(curScene===1||curScene===2||curScene===6)){
+      const ch=CH[curScene][ci%CH[curScene].length],note=ch[ai%ch.length];
+      if(curScene===2)playAutoMel(s.arpSynth,note+12,0.6,{amp:0.07+Math.random()*0.05,release:0.8,pan:(Math.random()-0.5)*1.2});
+      else playAutoMel(s.arpSynth,note+12,0.3,{amp:0.08+Math.random()*0.06,release:0.3,pan:(Math.random()-0.5)*1.0});
+      ai++;}
+    setT('arp',tick,(60000/getBpm()/2)*(0.9+Math.random()*0.2));
+  }tick();
+}
+
+function startSparkle(){
+  function tick(){const s=SC[curScene];
+    if(Math.random()<s.sparkleP*densityMod){const note=pick(BELLS);
+      playBg('sonic-pi-pretty_bell',note,0.5,{amp:0.06+Math.random()*0.08,release:0.5,pan:(Math.random()-0.5)*1.2});
+      spawnParticle(Math.random()*W,Math.random()*H,'#ffe',2);}
+    setT('sparkle',tick,180+Math.random()*280);
+  }tick();
+}
+
+function startKick(){
+  function tick(){const s=SC[curScene];
+    if(s.kick)playBg('sonic-pi-sc808_bassdrum',36,0.3,{amp:0.35});
+    setT('kick',tick,s.kick?s.kickRate:600);
+  }tick();
+}
+
+function startFormless(){
+  function tick(){
+    if(curScene===3&&sonic){
+      if(Math.random()<0.4)playBg('sonic-pi-growl',pick([33,36,40,45]),4+Math.random()*4,{amp:0.3,attack:1.5,release:4,cutoff:70});
+      if(Math.random()<0.4)playBg('sonic-pi-dark_ambience',pick([33,38,40,45]),6,{amp:0.25,attack:1.5,release:6,cutoff:65});
+      if(Math.random()<0.35)playBg('sonic-pi-hollow',pick([33,36,40,45]),8,{amp:0.25,attack:2,release:8,cutoff:60});
+      if(Math.random()<0.2)playBg('sonic-pi-mod_sine',pick([33,36,40]),6,{amp:0.12,attack:3,release:6,cutoff:55});
+    }
+    setT('formless',tick,1000+Math.random()*1500);
+  }tick();
+}
+
+function startSoundFX(){
+  function tick(){const fx=SC[curScene].fxType;
+    if(fx==='wind'&&Math.random()<0.3)playBg('sonic-pi-noise',40,3+Math.random()*4,{amp:0.05,attack:2,release:3,cutoff:40+Math.random()*15});
+    else if(fx==='bird'&&Math.random()<0.2){const bn=86+Math.floor(Math.random()*8);
+      playBg('sonic-pi-pretty_bell',bn,0.1,{amp:0.06,release:0.1});
+      setTimeout(()=>playBg('sonic-pi-pretty_bell',bn+2,0.08,{amp:0.05,release:0.08}),60+Math.random()*80);
+      spawnParticle(Math.random()*W,Math.random()*H*0.3,'#aaffaa',2);}
+    else if(fx==='radio-signal'){
+      if(Math.random()<0.6)playBg('sonic-pi-noise',50+Math.floor(Math.random()*20),0.1+Math.random()*0.4,{amp:0.07+Math.random()*0.05,attack:0.01,release:0.2,cutoff:40+Math.random()*40});
+      if(Math.random()<0.3)playBg('sonic-pi-noise',40+Math.floor(Math.random()*30),1+Math.random()*2,{amp:0.05,attack:0.3,release:1.5,cutoff:30+Math.random()*25});
+      if(Math.random()<0.2)playBg('sonic-pi-beep',80+Math.floor(Math.random()*15),0.05+Math.random()*0.1,{amp:0.035,release:0.1});
+    }
+    else if(fx==='noise-burst'){
+      if(Math.random()<0.15)playBg('sonic-pi-noise',60,0.1,{amp:0.08,attack:0.01,release:0.1,cutoff:80+Math.random()*30});
+      if(Math.random()<0.1)playBg('sonic-pi-sc808_clap',60,0.15,{amp:0.15});}
+    else if(fx==='ocean-space'){
+      if(Math.random()<0.25)playBg('sonic-pi-noise',45,4+Math.random()*4,{amp:0.04,attack:2.5,release:4,cutoff:35+Math.random()*10});
+      if(curScene===5&&Math.random()<0.12)playBg('sonic-pi-dull_bell',pick([64,67,72,76]),4,{amp:0.06,attack:2,release:4});}
+    else if(fx==='space-metal'){
+      if(Math.random()<0.2)playBg('sonic-pi-sc808_cowbell',72+Math.floor(Math.random()*12),0.3,{amp:0.08,pan:(Math.random()-0.5)*1.2});
+      if(Math.random()<0.15)playBg('sonic-pi-pluck',pick([84,86,88,91,93]),0.8,{amp:0.07,release:0.8});}
+    if((curScene===3||curScene===4||curScene===5)&&Math.random()<0.08)
+      playBg('sonic-pi-noise',60,0.08,{amp:0.03,attack:0.01,release:0.08,cutoff:60+Math.random()*30});
+    setT('fx',tick,fx==='radio-signal'?400+Math.random()*800:800+Math.random()*2000);
+  }tick();
+}
+
+function startBellRain(){
+  function tick(){if(curScene===6){
+    if(Math.random()<0.4*densityMod){playAutoMel('sonic-pi-pretty_bell',pick(SCALES[6]),1.5+Math.random()*2,{amp:0.08+Math.random()*0.08,release:2,pan:(Math.random()-0.5)*1.2});
+      spawnParticle(Math.random()*W,Math.random()*0.4*H,'#ffd700',3);}
+    if(Math.random()<0.25){playAutoMel('sonic-pi-pluck',pick(SCALES[6]),0.8,{amp:0.1,release:0.8});
+      spawnParticle(Math.random()*W,Math.random()*H,'#c0c0c0',2);}}
+    setT('bellrain',tick,250+Math.random()*500);
+  }tick();
+}
+
+function startFormlessHat(){
+  function tick(){if(curScene===3){const r=Math.random();
+    if(r<0.4)playBg('sonic-pi-sc808_closed_hihat',60,0.05,{amp:0.06+Math.random()*0.06});
+    else if(r<0.5)playBg('sonic-pi-sc808_open_hihat',60,0.15,{amp:0.04+Math.random()*0.04});
+    else if(r<0.55)playBg('sonic-pi-sc808_rimshot',60,0.1,{amp:0.05});
+    const q=60000/60,rr=Math.random();
+    let next;if(rr<0.4)next=q;else if(rr<0.65)next=q*2;else if(rr<0.8)next=q/2;else if(rr<0.9)next=q/3;else next=q/4;
+    setT('fhat',tick,next*(0.8+Math.random()*0.4));
+  }else setT('fhat',tick,500);
+  }tick();
+}
+
+function startAllLoops(){
+  clearAll();
+  startPadChords();startBass();startMelody();startMelodyB();startMel2();
+  startArp();startSparkle();startKick();startFormless();startSoundFX();
+  startBellRain();startFormlessHat();
+}
+
+// Particle stub — no visual, just a no-op so calls don't error
+function spawnParticle(){}
+
+// ============================================================
+// SCENE SWITCH
+// ============================================================
+let transRafId=null;
+function setScene(n){
+  if(!started)return;
+  const prevBgScale=bgScale;
+  const targetBgScale=+$('bgVol').value/100;
+  curScene=n;ci=0;
+  const s=SC[n],scale=SCALES[n];
+  if(scale.length){mP=Math.min(mP,scale.length-1);m2P=Math.min(m2P,scale.length-1);mBP=Math.min(mBP,scale.length-1);}
+  if(!bpmOverride){$('bpmCtrl').value=s.bpm;$('vBpm').textContent=s.bpm;}
+  // Ramp BG volume: fade out old → fade in new over transitionTime
+  if(transRafId)cancelAnimationFrame(transRafId);
+  const tStart=performance.now(),tHalf=transitionTime/2;
+  bgScale=0; // start silent
+  function rampBg(now){
+    const elapsed=now-tStart;
+    if(elapsed<tHalf){bgScale=targetBgScale*(1-elapsed/tHalf);}
+    else if(elapsed<transitionTime){bgScale=targetBgScale*((elapsed-tHalf)/tHalf);}
+    else{bgScale=targetBgScale;return;}
+    transRafId=requestAnimationFrame(rampBg);
+  }
+  transRafId=requestAnimationFrame(rampBg);
+  startAllLoops();
+  $('scene-name').textContent=`#${n} ${s.name}`;
+  const pct=s.energy*10;
+  $('energy-fill').style.width=pct+'%';
+  $('energy-fill').style.background=s.energy>7?'#f44':s.energy>4?'#fa4':s.energy>2?'#48a':'#446';
+  document.querySelectorAll('.sb').forEach((el,i)=>el.classList.toggle('on',i===n));
+  log(`Scene ${n}: ${s.name} | det:${s.det} | ${getBpm()}bpm`);
+}
+window._setScene=setScene;
+
+// ============================================================
+// CONTROLS
+// ============================================================
+$('vol').oninput=function(){volScale=this.value/100;$('vVol').textContent=this.value;};
+$('bgVol').oninput=function(){bgScale=this.value/100;$('vBg').textContent=this.value;};
+$('melAVol').oninput=function(){melAScale=this.value/100;$('vMelA').textContent=this.value;};
+$('melBVol').oninput=function(){melBScale=this.value/100;$('vMelB').textContent=this.value;};
+$('bpmCtrl').oninput=function(){bpmOverride=+this.value;$('vBpm').textContent=this.value;};
+$('transCtrl').oninput=function(){transitionTime=+this.value;$('vTrans').textContent=(this.value/1000).toFixed(1)+'s';};
+$('densCtrl').oninput=function(){densityMod=0.3+(this.value/100)*1.7;$('vDens').textContent=this.value;};
+$('threshCtrl').oninput=function(){G.thresh=+this.value;$('vThr').textContent=this.value;};
+$('sensCtrl').oninput=function(){G.sens=+this.value;$('vSens').textContent=this.value;};
+window._toggleAuto=function(){G.autoMel=!G.autoMel;Z('btnAuto');$('btnAuto').textContent=G.autoMel?'Auto-Mel ON':'Auto-Mel OFF';};
+window._toggleDark=function(){G.dark=!G.dark;Z('btnDark');};
+window._toggleDbg=function(){G.dbg=!G.dbg;Z('btnDbg');};
+window._togglePose=function(){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!mpObj)loadMP();};
+$('poseTCtrl').oninput=function(){G.poseThresh=this.value/100;$('vPoseT').textContent=G.poseThresh.toFixed(2);};
+document.addEventListener('keydown',e=>{
+  const n=parseInt(e.key);if(n>=0&&n<=6)setScene(n);
+  if(e.key==='d'||e.key==='D'){G.dbg=!G.dbg;Z('btnDbg');}
+  if(e.key==='p'||e.key==='P'){G.mpOn=!G.mpOn;Z('btnPose');if(G.mpOn&&!mpObj)loadMP();}
+  if(e.key==='a'||e.key==='A')window._toggleAuto();
+});
+
+// ============================================================
+// MONITOR — minimal, detection only, no decorative visuals
+// ============================================================
+let fN=0,fT=0;
+
+function draw(now){
+  // Pose-driven triggers at 60fps (all scenes when pose enabled)
+  if(started&&G.mpOn)trigPlexus60fps();
+
+  // Clear monitor
+  cx.fillStyle='#080810';cx.fillRect(0,0,W,H);
+  const col=SC[curScene]?.color||'#448';
+
+  // Camera feed — native resolution, centered, no stretch
+  if(video&&video.videoWidth){
+    const vw=video.videoWidth,vh=video.videoHeight;
+    const scale=Math.min(W/vw,H/vh);
+    const dw=vw*scale,dh=vh*scale;
+    const dx=(W-dw)/2,dy=(H-dh)/2;
+    cx.globalAlpha=0.5;cx.drawImage(video,dx,dy,dw,dh);cx.globalAlpha=1;
+  }
+
+  // Compute camera-aligned coords
+  const vw=video?video.videoWidth||320:320,vh=video?video.videoHeight||240:240;
+  const scale=Math.min(W/vw,H/vh);
+  const dw=vw*scale,dh=vh*scale,dx=(W-dw)/2,dy=(H-dh)/2;
+  function cx2(nx){return dx+nx*dw}
+  function cy2(ny){return dy+ny*dh}
+
+  // Blob dots (small, simple) — skip on scene 4 (pose only)
+  if(curScene!==4){
+    blobs.forEach(b=>{
+      cx.fillStyle=col;cx.beginPath();cx.arc(cx2(b.x),cy2(b.y),3+b.sz*0.5,0,Math.PI*2);cx.fill();
+    });
+  }
+
+  // Pose skeleton (always show if available)
+  if(pose){const lm=pose.lm;
+    cx.strokeStyle='#0f0';cx.lineWidth=1;
+    [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]].forEach(([a,b])=>{
+      cx.beginPath();cx.moveTo(cx2(lm[a].x),cy2(lm[a].y));cx.lineTo(cx2(lm[b].x),cy2(lm[b].y));cx.stroke();});
+    lm.forEach(l=>{cx.fillStyle='#0f0';cx.beginPath();cx.arc(cx2(l.x),cy2(l.y),2,0,Math.PI*2);cx.fill();});
+  }
+
+  // Status text on monitor
+  cx.fillStyle='#446';cx.font='9px monospace';
+  cx.fillText(`#${curScene} ${SC[curScene].name} | ${getBpm()}bpm | poseVel:${poseVel.toFixed(3)}`,4,H-4);
+
+  // Update main screen label
+  $('main-border').textContent=`#${curScene} ${SC[curScene].name} — ${SC[curScene].nameT}`;
+
+  // FPS
+  fN++;if(now-fT>1000){$('nF').textContent=fN;fN=0;fT=now;}
+}
+function loop(now){requestAnimationFrame(loop);draw(now);}
+requestAnimationFrame(loop);
+
+// ============================================================
+// START
+// ============================================================
+$('info').addEventListener('click',init,{once:true});
+</script>
+</body></html>

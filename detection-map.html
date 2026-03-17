@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afterlife Dance — Detection Map v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-serif;padding:20px}
+h1{color:#fff;font-size:1.4em;margin-bottom:2px}
+.sub{color:#666;font-size:0.82em;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+thead th{background:#111;color:#777;padding:8px 6px;text-align:left;font-size:0.7em;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #222;position:sticky;top:0;z-index:1}
+tbody td{padding:10px 6px;border-bottom:1px solid #151515;vertical-align:top;font-size:0.82em;line-height:1.55}
+tbody tr:hover{background:#0d0d0d}
+th:nth-child(1){width:10%}th:nth-child(2){width:5%}th:nth-child(3){width:12%}th:nth-child(4){width:12%}th:nth-child(5){width:8%}th:nth-child(6){width:18%}th:nth-child(7){width:18%}th:nth-child(8){width:17%}
+.scene{font-weight:700;color:#fff;font-size:0.92em}
+.scene-num{color:#555;font-size:0.75em;display:block}
+.time{color:#666;font-size:0.82em;text-align:center}
+.energy-num{color:#888;font-size:0.82em;text-align:center;font-weight:700}
+.energy-bar{height:6px;border-radius:3px;margin-top:3px}
+.yes{color:#44ff88;font-weight:700}.no{color:#ff4444;font-weight:700}.maybe{color:#ffaa44;font-weight:700}
+.impact-high{color:#ff4444;font-weight:700}.impact-med{color:#ffaa44;font-weight:700}.impact-low{color:#666;font-weight:700}
+.note{color:#555;font-size:0.75em;margin-top:4px;padding-top:4px;border-top:1px solid #1a1a1a}
+.tone{color:#66aa88;font-size:0.78em}
+tr[data-s="0"] td:first-child{border-left:3px solid #555}
+tr[data-s="1"] td:first-child{border-left:3px solid #4488ff}
+tr[data-s="2"] td:first-child{border-left:3px solid #44aa88}
+tr[data-s="3"] td:first-child{border-left:3px solid #886644}
+tr[data-s="4"] td:first-child{border-left:3px solid #ff4444}
+tr[data-s="5"] td:first-child{border-left:3px solid #884488}
+tr[data-s="6"] td:first-child{border-left:3px solid #ffaa44}
+</style>
+</head>
+<body>
+
+<h1>Afterlife Dance — Detection Map v2</h1>
+<div class="sub">What to detect per scene. Auto-switches. Camera 320×240 → offscreen 80×60 at 5fps (setInterval, NOT rAF). MediaPipe lazy-loads on Scene 4.</div>
+
+<table>
+<thead>
+<tr><th>Scene</th><th>Energy</th><th>Light (Henry)</th><th>Props</th><th>Detect</th><th>What → Sound</th><th>What → Visual</th><th>Tone.js Synth</th></tr>
+</thead>
+<tbody>
+
+<tr data-s="0">
+<td><span class="scene-num">#0</span><span class="scene">Chanting</span></td>
+<td class="energy-num">0→2<div class="energy-bar" style="width:20%;background:linear-gradient(to right,#333,#555)"></div></td>
+<td>Spot on Piramon only</td>
+<td>—</td>
+<td><span class="no">OFF</span></td>
+<td>No interactive. Background only: quiet pad + sparse melody + heartbeat kick.</td>
+<td>Stars twinkling. No tracked points.</td>
+<td><span class="tone">PolySynth pad, FMSynth mel, MembraneSynth kick</span></td>
+</tr>
+
+<tr data-s="1">
+<td><span class="scene-num">#1</span><span class="scene">Formation</span></td>
+<td class="energy-num">2→8<div class="energy-bar" style="width:80%;background:linear-gradient(to right,#336,#4488ff)"></div></td>
+<td>Dim left-white. Work dim.</td>
+<td>Costume LED</td>
+<td><span class="yes">BLOB</span></td>
+<td>Blob movement → FM bell. Y=note. Multi-blob=staggered. Velocity spike → ลายแคน phrase (5-8 notes). Sustained movement → filter modulation.</td>
+<td>Blob → glow circle + trail. Trails converge inward (star formation).</td>
+<td><span class="tone">iBell PolySynth(FMSynth harm:5.4)</span></td>
+</tr>
+
+<tr data-s="2">
+<td><span class="scene-num">#2</span><span class="scene">Binary</span></td>
+<td class="energy-num">8→5<div class="energy-bar" style="width:60%;background:linear-gradient(to right,#4488ff,#44aa88)"></div></td>
+<td>Low end</td>
+<td>LED on base</td>
+<td><span class="yes">2-BLOB</span></td>
+<td>2 blobs → mirrored notes (Y and 1-Y). Distance → filter. Beating (±1.5Hz detune). One moves → both sound.</td>
+<td>2 glow points in orbital paths. Trails show figure-eight.</td>
+<td><span class="tone">iBell × 2 mirrored</span></td>
+</tr>
+
+<tr data-s="3">
+<td><span class="scene-num">#3</span><span class="scene">Formless</span></td>
+<td class="energy-num">5→0<div class="energy-bar" style="width:12%;background:linear-gradient(to right,#886644,#333)"></div></td>
+<td>Near zero</td>
+<td>Plates over dancers</td>
+<td><span class="no">OFF (by design)</span></td>
+<td>Autonomous: NoiseSynth → shifting formant filters (5 vowels, every 8n). Sub drone (AMSynth low). No melody. Reverb wet 0.6.</td>
+<td>No tracked points. Particles diffusing autonomously. Star-burst fading.</td>
+<td><span class="tone">NoiseSynth(pink) → Filter×2, AMSynth sub</span></td>
+</tr>
+
+<tr data-s="4" style="background:#110808">
+<td><span class="scene-num">#4</span><span class="scene">Supernova</span></td>
+<td class="energy-num">0→10<div class="energy-bar" style="width:100%;background:linear-gradient(to right,#884444,#ff4444)"></div></td>
+<td>Strobe white</td>
+<td>Orb + arm flash</td>
+<td><span class="yes">★ POSE+BLOB ★</span></td>
+<td><span class="impact-high">★ MAX ★</span> MediaPipe: fastest joint → kick/hat/snare (CEING). 80ms cooldown. Blob fallback: velocity → drums, Y=type. 100ms cooldown. Bright flash → dissonant bell burst. Base kick every 4n.</td>
+<td>Full body skeleton during strobe (33 pts appear/vanish). Arm flash → bright streaks. Explosion outward.</td>
+<td><span class="tone">MembraneSynth kick, MetalSynth hat, iBell bursts</span></td>
+</tr>
+
+<tr data-s="5">
+<td><span class="scene-num">#5</span><span class="scene">Collapse</span></td>
+<td class="energy-num">10→2<div class="energy-bar" style="width:25%;background:linear-gradient(to right,#ff4444,#664488)"></div></td>
+<td>→ Black light (UV)</td>
+<td>Plate opens, token, butterfly drone</td>
+<td><span class="yes">BLOB</span></td>
+<td>Blob Y → ascending bell from PENTA_HI. 200ms cooldown. Retrigger stutter (MetalSynth 8n grid, 25%). Melody walks high scale.</td>
+<td>Plate light → ascending glow point. Particles settling + some drifting up. Butterfly = ascending dot.</td>
+<td><span class="tone">iBell PENTA_HI, MetalSynth stutter</span></td>
+</tr>
+
+<tr data-s="6">
+<td><span class="scene-num">#6</span><span class="scene">Distribute</span></td>
+<td class="energy-num">2→∞<div class="energy-bar" style="width:35%;background:linear-gradient(to right,#886644,#ffaa44)"></div></td>
+<td>Black light</td>
+<td>Glowing lotus tokens</td>
+<td><span class="yes">★ MULTI-BLOB ★</span></td>
+<td><span class="impact-high">★ HIGH ★</span> Each token = blob = FM bell chime. Y=note. More tokens = richer. Staggered 120ms. Heartbeat kick returns. Audience IS the instrument.</td>
+<td>Each token = glow point on screen. Audience becomes the particle field. Gentle drift trails.</td>
+<td><span class="tone">iBell BELLS scale, MembraneSynth heartbeat</span></td>
+</tr>
+
+</tbody>
+</table>
+
+<div style="margin-top:16px;padding:10px;background:#0a0a0f;border:1px solid #1a1a2a;border-radius:4px;font-size:0.8em;color:#668;line-height:1.6">
+<strong style="color:#4a4a8a">ARCHITECTURE SUMMARY</strong><br><br>
+<strong>Thread 1 — Audio:</strong> Tone.Transport. All loops (pad, melody, mel2, sparkle, heart, gibberish, sub, drums, retrig, grace). Never blocks.<br>
+<strong>Thread 2 — Detection:</strong> setInterval(200ms). Camera 320×240 → offscreen 80×60. Blob clustering. MediaPipe every other detect call. Calls triggerFromBlobs() at end.<br>
+<strong>Thread 3 — Draw:</strong> requestAnimationFrame. Stars, blob glow/trails, skeleton overlay. No audio, no detection.<br><br>
+<strong>Auto-detection:</strong> Scene switch → SC[n].det checked → 'off' skips detection, 'blob' runs blob only, 'pose+blob' also runs MediaPipe.<br>
+<strong>Light mode:</strong> blob threshold 80+(100-sens)*0.8 | <strong>Dark mode:</strong> threshold 25+(100-sens)*0.3<br>
+<strong>Transitions:</strong> pad.volume.rampTo(), mel.volume.rampTo(), rev.wet.rampTo() — all smooth via Tone.js
+</div>
+
+</body>
+</html>

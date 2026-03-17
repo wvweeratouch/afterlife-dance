@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Afterlife Dance — Engine v9</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#ddd;font-family:system-ui;height:100vh;display:flex;flex-direction:column}
+#bar{padding:8px 12px;background:#0a0a12;border-bottom:1px solid #1a1a2a;display:flex;gap:10px;align-items:center;font-size:11px;z-index:5;flex-wrap:wrap}
+#bar label{color:#446}
+#bar input[type=number]{width:44px;background:#111;border:1px solid #222;color:#aaa;padding:2px 4px;font-size:11px;border-radius:2px}
+#bar input[type=range]{width:70px;height:3px;-webkit-appearance:none;background:#222;border:none;border-radius:2px}
+#bar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:#668;border-radius:50%;cursor:pointer}
+.sb{padding:3px 8px;border:1px solid #333;border-radius:3px;background:#111;color:#888;cursor:pointer;font-size:10px;font-family:monospace}
+.sb.on{background:#224;color:#8af;border-color:#448}
+#scene-name{color:#8af;font-weight:bold;min-width:120px}
+#energy-bar{width:80px;height:8px;background:#111;border-radius:4px;overflow:hidden}
+#energy-fill{height:100%;border-radius:4px;transition:width 3s,background 3s}
+canvas{flex:1}
+#info{position:absolute;bottom:8px;left:12px;color:#335;font-size:11px}
+</style>
+<script src="https://unpkg.com/tone@14"></script>
+</head><body>
+<div id="bar">
+  <label>BPM</label><input type="number" value="100" min="40" max="200" id="bpm">
+  <label>Vol</label><input type="range" min="0" max="100" value="100" id="vol">
+  <label>Echo</label><input type="range" min="0" max="100" value="35" id="echo">
+  <span style="color:#333">|</span>
+  <span class="sb" onclick="setScene(0)">0 Chant</span>
+  <span class="sb" onclick="setScene(1)">1 Form</span>
+  <span class="sb" onclick="setScene(2)">2 Binary</span>
+  <span class="sb" onclick="setScene(3)">3 Formless</span>
+  <span class="sb" onclick="setScene(4)">4 Nova</span>
+  <span class="sb" onclick="setScene(5)">5 Collapse</span>
+  <span class="sb" onclick="setScene(6)">6 Distribute</span>
+  <span style="color:#333">|</span>
+  <span id="scene-name">—</span>
+  <div id="energy-bar"><div id="energy-fill" style="width:0%"></div></div>
+</div>
+<canvas id="c"></canvas>
+<div id="info">Click to start. Keys 0-6 = scenes.</div>
+
+<script>
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+let W,H;function rz(){W=cv.width=cv.offsetWidth;H=cv.height=cv.offsetHeight}rz();onresize=rz;
+let started=false;
+
+// ============================================================
+// SCALES — all in Am (A minor pentatonic family), different registers per energy
+// ============================================================
+// Low energy = low register, sparse, long notes
+// High energy = wide register, dense, short notes, more layers
+// Per-scene chord sets — same key (Am) but different voicing/register/density
+const CHORDS={
+  // 0: hollow, sacred — root+5th only, low
+  0:[['A1','E2','A2'],['D2','A2','D3'],['E2','B2','E3'],['A1','E2','A2']],
+  // 1: building — full chords, mid register, more color
+  1:[['A2','C3','E3','A3','C4'],['F2','A2','C3','F3','A3'],['G2','B2','D3','G3','B3'],['E2','G2','B2','E3','G3'],['D2','F2','A2','D3','F3']],
+  // 2: paired, pulsing — two-note intervals, tight
+  2:[['A2','E3','A3','E4'],['C3','G3','C4','G4'],['D3','A3','D4','A4'],['E3','B3','E4','B4']],
+  // 3: dissolving — single bass drones, barely there
+  3:[['A1','A2'],['E1','E2'],['D1','D2'],['A1','A2']],
+  // 4: power — thick octaves + 5ths, driving
+  4:[['A1','A2','E3','A3','E4'],['D2','D3','A3','D4','A4'],['E2','E3','B3','E4','B4'],['G2','G3','D4','G4','D5'],['F2','F3','C4','F4','C5']],
+  // 5: ethereal — high voicings, open spacing
+  5:[['A3','E4','A4','C5'],['D3','A4','D5','F5'],['E3','B4','E5','G5'],['A3','E4','A4','C5']],
+  // 6: warm resolution — gentle, full but soft
+  6:[['A2','C3','E3','A3','E4'],['F2','A2','C3','F3','C4'],['G2','B2','D3','G3','D4'],['A2','C3','E3','A3','E4']],
+};
+// Scene-specific melody scales — same key (Am), different vibe
+const SCALE_WHISPER=['A3','C4','D4','E4','G4'];                          // low, sparse
+const SCALE_RISE  =['C4','D4','E4','G4','A4','C5','D5','E5'];           // mid, building
+const SCALE_ORBIT =['A3','C4','E4','G4','A4','C5','E5'];                // symmetric pairs
+const SCALE_VOID  =[];                                                    // nothing
+const SCALE_CHAOS =['A3','C4','D4','E4','G4','A4','C5','D5','E5','G5','A5','C6']; // full range
+const SCALE_HIGH  =['E5','G5','A5','C6','D6','E6','G6','A6'];           // ascending, ethereal
+const SCALE_WARM  =['C4','E4','G4','A4','C5','E5'];                      // gentle, resolved
+
+const MEL2_SCALE=['E3','G3','A3','C4','D4','E4','G4','A4'];
+const VOWELS=[[270,2300],[730,1090],[300,870],[660,1720],[520,1190]];
+
+// ============================================================
+// SCENES — Henry's energy map, each scene has its own CHARACTER
+// ============================================================
+const SC=[
+  // 0: Summoning — quiet, sacred, heartbeat only
+  // Pad: very slow, long attack, hollow
+  { name:'Summoning',nameT:'เรียกขวัญ',energy:2,color:'#334',
+    scale:SCALE_WHISPER, padVol:-10, melVol:-12, mel2Vol:-99,
+    sparkleP:0, kickInt:'2n', melRest:0.55, melDurs:['2n','1m'],
+    revWet:0.5, breathRate:0.12, breathAmt:0.15,
+    bpm:72, swing:0.05, padVel:0.18, gibberish:false,
+    padAtk:3.5, padRel:5, padModIdx:0.2, padOsc:'sine', padChordRate:'4m' },
+
+  // 1: Formation — building, pulsing chords
+  // Pad: medium attack, richer modulation, chord changes faster
+  { name:'Formation',nameT:'ขวัญ gathering',energy:8,color:'#448',
+    scale:SCALE_RISE, padVol:-6, melVol:-4, mel2Vol:-8,
+    sparkleP:0.18, kickInt:null, melRest:0.12, melDurs:['8n','8n.','4n','4n.'],
+    revWet:0.3, breathRate:0.18, breathAmt:0.2,
+    bpm:108, swing:0.04, padVel:0.28, gibberish:false,
+    padAtk:1.0, padRel:2, padModIdx:0.8, padOsc:'sine', padChordRate:'1m' },
+
+  // 2: Binary — pulsing pairs, staccato-ish chords
+  // Pad: short attack, punchy, chord every 2 bars
+  { name:'Binary',nameT:'หิง-ขวัญ',energy:6,color:'#484',
+    scale:SCALE_ORBIT, padVol:-6, melVol:-4, mel2Vol:-8,
+    sparkleP:0.15, kickInt:'4n.', melRest:0.18, melDurs:['8n','4n','4n.'],
+    revWet:0.3, breathRate:0.22, breathAmt:0.18,
+    bpm:100, swing:0.08, padVel:0.24, gibberish:false,
+    padAtk:0.3, padRel:1.5, padModIdx:1.2, padOsc:'triangle', padChordRate:'2m' },
+
+  // 3: Formless — dissolving, barely audible drone
+  // Pad: extremely slow, fading, just a hum
+  { name:'Formless',nameT:'ร่างเสมือน',energy:1,color:'#433',
+    scale:SCALE_VOID, padVol:-14, melVol:-99, mel2Vol:-99,
+    sparkleP:0, kickInt:null, melRest:1, melDurs:['1m'],
+    revWet:0.7, breathRate:0.08, breathAmt:0.25,
+    bpm:60, swing:0, padVel:0.1, gibberish:true,
+    padAtk:5, padRel:8, padModIdx:0.1, padOsc:'sine', padChordRate:'4m' },
+
+  // 4: Supernova — NO BACKGROUND, plexus noise interactive only
+  { name:'Supernova',nameT:'ขวัญหนี',energy:10,color:'#844',
+    scale:SCALE_CHAOS, padVol:-99, melVol:-99, mel2Vol:-99,
+    sparkleP:0, kickInt:'4n', melRest:1, melDurs:['4n'],
+    revWet:0.15, breathRate:0.3, breathAmt:0.08,
+    bpm:138, swing:0.02, padVel:0, gibberish:false,
+    padAtk:0.05, padRel:0.8, padModIdx:2.5, padOsc:'sawtooth', padChordRate:'2n',
+    plexus:true },
+
+  // 5: Collapse — ethereal, floating, high register
+  // Pad: medium-slow, glassy, wide spacing
+  { name:'Collapse',nameT:'ส่งขวัญขึ้นฟ้า',energy:3,color:'#648',
+    scale:SCALE_HIGH, padVol:-8, melVol:-6, mel2Vol:-99,
+    sparkleP:0.08, kickInt:null, melRest:0.28, melDurs:['4n','4n.','2n','1m'],
+    revWet:0.65, breathRate:0.1, breathAmt:0.22,
+    bpm:80, swing:0.06, padVel:0.2, gibberish:false,
+    padAtk:2, padRel:6, padModIdx:0.3, padOsc:'sine', padChordRate:'2m' },
+
+  // 6: Distribute — warm, resolved, gentle pulse
+  // Pad: medium attack, warm, steady
+  { name:'Distribute',nameT:'cyclical',energy:4,color:'#664',
+    scale:SCALE_WARM, padVol:-8, melVol:-6, mel2Vol:-8,
+    sparkleP:0.12, kickInt:'2n', melRest:0.32, melDurs:['4n','2n','2n.'],
+    revWet:0.4, breathRate:0.15, breathAmt:0.18,
+    bpm:92, swing:0.05, padVel:0.22, gibberish:false,
+    padAtk:1.5, padRel:3, padModIdx:0.5, padOsc:'sine', padChordRate:'2m' },
+];
+
+let curScene=0;
+
+// ============================================================
+// AUDIO
+// ============================================================
+let rev,pad,mel,mel2,sparkle,kick;
+let breathNoise,breathFilter,breathGain,breathLFO;
+let gibNoise,gibF1,gibF2,gibF3,gibGain,gibDrone1,gibDrone2,gibDrone3,gibSwell,gibLoop=null,gibSwellLoop=null,kickLoop=null;
+let plexusActive=false,lastPlxTime=0;
+let mouseX=0.5,mouseY=0.5,prevMouseX=0.5,prevMouseY=0.5,mouseVel=0;
+
+async function initAudio(){
+  rev=new Tone.Reverb(6);rev.toDestination();await rev.ready;
+  const chorus=new Tone.Chorus({frequency:0.2,delayTime:3.5,depth:0.6,wet:0.2});chorus.connect(rev);
+  const dly1=new Tone.FeedbackDelay({delayTime:'8n.',feedback:0.25,wet:0.3});dly1.connect(rev);
+  const dly2=new Tone.FeedbackDelay({delayTime:'4n',feedback:0.2,wet:0.25});dly2.connect(rev);
+
+  pad=new Tone.PolySynth(Tone.FMSynth,{maxPolyphony:10,options:{
+    harmonicity:1,modulationIndex:0.4,envelope:{attack:2.5,decay:1.5,sustain:0.8,release:4},
+    modulation:{type:'sine'},oscillator:{type:'sine'}}});
+  pad.volume.value=-10;pad.connect(chorus);
+
+  mel=new Tone.FMSynth({harmonicity:3,modulationIndex:1.2,
+    envelope:{attack:0.01,decay:0.35,sustain:0.2,release:0.8},
+    modulation:{type:'triangle'},oscillator:{type:'sine'}});
+  mel.volume.value=-6;mel.connect(dly1);
+
+  mel2=new Tone.AMSynth({harmonicity:2,envelope:{attack:0.05,decay:0.6,sustain:0.15,release:1.5},
+    oscillator:{type:'triangle'},modulation:{type:'sine'}});
+  mel2.volume.value=-10;mel2.connect(dly2);
+
+  sparkle=new Tone.MetalSynth({frequency:300,envelope:{attack:0.001,decay:1.2,release:0.8},
+    harmonicity:5.1,modulationIndex:16,resonance:3000,octaves:1.5});
+  sparkle.volume.value=-14;sparkle.connect(rev);
+
+  kick=new Tone.MembraneSynth({pitchDecay:0.05,octaves:4,
+    envelope:{attack:0.001,decay:0.4,sustain:0,release:0.4}});
+  kick.volume.value=-4;kick.connect(rev);
+
+  // Breathing
+  breathNoise=new Tone.Noise('pink');
+  breathFilter=new Tone.Filter({frequency:800,type:'bandpass',Q:1.5});
+  breathLFO=new Tone.LFO({frequency:0.15,min:0,max:0.35,type:'sine'});
+  breathGain=new Tone.Gain(0.25);
+  breathNoise.connect(breathFilter);breathFilter.connect(breathGain);
+  breathGain.connect(rev);breathLFO.connect(breathGain.gain);
+  breathNoise.start();breathLFO.start();
+
+  // Formless layer — drone cluster + loud formant voices + reverse swells
+  // Drone: 3 detuned sines that beat against each other
+  gibDrone1=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:4,decay:0,sustain:1,release:4}});
+  gibDrone2=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:4,decay:0,sustain:1,release:4}});
+  gibDrone3=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:4,decay:0,sustain:1,release:4}});
+  gibDrone1.volume.value=-10;gibDrone2.volume.value=-10;gibDrone3.volume.value=-10;
+  gibDrone1.connect(rev);gibDrone2.connect(rev);gibDrone3.connect(rev);
+
+  // Formant voice — LOUD, white noise through resonant filters
+  gibNoise=new Tone.Noise('white');
+  gibF1=new Tone.Filter({frequency:700,type:'bandpass',Q:12});
+  gibF2=new Tone.Filter({frequency:1200,type:'bandpass',Q:10});
+  gibF3=new Tone.Filter({frequency:2600,type:'bandpass',Q:8});
+  gibGain=new Tone.Gain(0);
+  gibNoise.connect(gibF1);gibNoise.connect(gibF2);gibNoise.connect(gibF3);
+  gibF1.connect(gibGain);gibF2.connect(gibGain);gibF3.connect(gibGain);
+  gibGain.connect(rev);gibNoise.start();
+
+  // Reverse swell synth — notes that fade IN slowly then cut
+  gibSwell=new Tone.FMSynth({harmonicity:1.5,modulationIndex:3,
+    envelope:{attack:3,decay:0.1,sustain:0,release:0.1},
+    modulation:{type:'sine'},oscillator:{type:'triangle'}});
+  gibSwell.volume.value=-8;gibSwell.connect(rev);
+
+}
+
+// ============================================================
+// CEING PLEXUS DRUMS — kick/snare/hihat via raw Web Audio
+// ============================================================
+let plxCtx=null; // uses Tone's audio context
+function plxKick(v){
+  const ctx=Tone.context.rawContext,t=ctx.currentTime;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+0.12);
+  g.gain.setValueAtTime(Math.min(v*0.7,0.8),t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+  o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.35);
+}
+function plxHiHat(v){
+  const ctx=Tone.context.rawContext,t=ctx.currentTime;
+  const b=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate);
+  const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const s=ctx.createBufferSource();s.buffer=b;
+  const f=ctx.createBiquadFilter();f.type='highpass';f.frequency.value=7000;
+  const g=ctx.createGain();g.gain.setValueAtTime(Math.min(v*0.35,0.5),t);g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+  s.connect(f);f.connect(g);g.connect(ctx.destination);s.start(t);s.stop(t+0.08);
+}
+function plxSnare(v){
+  const ctx=Tone.context.rawContext,t=ctx.currentTime;
+  const b=ctx.createBuffer(1,ctx.sampleRate*0.12,ctx.sampleRate);
+  const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const s=ctx.createBufferSource();s.buffer=b;
+  const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=3000;
+  const ng=ctx.createGain();ng.gain.setValueAtTime(Math.min(v*0.35,0.4),t);ng.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+  s.connect(f);f.connect(ng);ng.connect(ctx.destination);
+  const o=ctx.createOscillator(),og=ctx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(200,t);o.frequency.exponentialRampToValueAtTime(80,t+0.05);
+  og.gain.setValueAtTime(Math.min(v*0.45,0.5),t);og.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+  o.connect(og);og.connect(ctx.destination);
+  s.start(t);s.stop(t+0.15);o.start(t);o.stop(t+0.12);
+}
+
+// ============================================================
+// NO-REPEAT WALK
+// ============================================================
+let mP=2,mD=1,m2P=3,m2D=-1,ci=0;
+
+function walk(p,d,sc){
+  if(!sc.length)return[0,1,false];
+  const old=p;
+  for(let i=0;i<6;i++){
+    let np=p,nd=d;
+    const r=Math.random();
+    if(r<0.35)np+=nd;
+    else if(r<0.55)np+=nd*2;
+    else if(r<0.7){nd*=-1;np+=nd;}
+    else if(r<0.85)np+=Math.round(Math.random()*2)-1;
+    else np=Math.floor(Math.random()*sc.length); // random jump
+    if(np>=sc.length){np=sc.length-2;nd=-1;}
+    if(np<0){np=1;nd=1;}
+    if(np!==old)return[np,nd,true];
+  }
+  return[(p+1)%sc.length,d,true];
+}
+
+// ============================================================
+// MUSIC LOOPS
+// ============================================================
+function startMusic(){
+  Tone.Transport.bpm.value=100;
+  Tone.Transport.swing=0.05;
+
+  // Pad — scene-specific chords + rate + timbre (managed by padLoop)
+  // padLoop is recreated on each scene switch for different chord rates
+  startPadLoop();
+
+  // Melody — scale, density, note durations ALL change per scene
+  new Tone.Loop(t=>{
+    try{
+      const s=SC[curScene];
+      if(Math.random()<s.melRest)return;
+      if(!s.scale.length)return;
+      const[p,d]=walk(mP,mD,s.scale);mP=p;mD=d;
+      const dur=s.melDurs[Math.floor(Math.random()*s.melDurs.length)];
+      mel.triggerAttackRelease(s.scale[mP],dur,t,0.15+Math.random()*0.3);
+    }catch(e){}
+  },'8n').start(0);
+
+  // Counter melody
+  new Tone.Loop(t=>{
+    try{
+      if(Math.random()>0.55)return;
+      const[p,d]=walk(m2P,m2D,MEL2_SCALE);m2P=p;m2D=d;
+      const durs=['4n','4n.','2n'];
+      mel2.triggerAttackRelease(MEL2_SCALE[m2P],durs[Math.floor(Math.random()*durs.length)],t,0.1+Math.random()*0.2);
+    }catch(e){}
+  },'4n').start('8n');
+
+  // Sparkle — faster tick for เอามันส์
+  new Tone.Loop(t=>{
+    try{
+      if(Math.random()<SC[curScene].sparkleP)
+        sparkle.triggerAttackRelease('32n',t,0.06+Math.random()*0.18);
+    }catch(e){}
+  },'8n').start('16n');
+
+  Tone.Transport.start();
+}
+
+// ============================================================
+// PAD LOOP — recreated per scene for different chord rates + timbre
+// ============================================================
+let padLoop=null;
+function startPadLoop(){
+  if(padLoop){padLoop.stop();padLoop.dispose();padLoop=null;}
+  const s=SC[curScene];
+  ci=0;
+  padLoop=new Tone.Loop(t=>{
+    try{
+      pad.releaseAll(t);
+      const chords=CHORDS[curScene];
+      const ch=chords[ci%chords.length];
+      ch.forEach((n,i)=>pad.triggerAttack(n,t+i*0.03,SC[curScene].padVel+Math.random()*0.08));
+      ci++;
+    }catch(e){}
+  },s.padChordRate);
+  padLoop.start(0);
+}
+
+function reshapePad(s){
+  try{pad.set({envelope:{attack:s.padAtk,release:s.padRel},modulationIndex:s.padModIdx,oscillator:{type:s.padOsc}});}catch(e){}
+}
+
+function triggerFirstChord(s){
+  try{pad.releaseAll();const ch=CHORDS[curScene][0];ch.forEach((n,i)=>pad.triggerAttack(n,Tone.now()+i*0.03,s.padVel));}catch(e){}
+}
+
+// ============================================================
+// SCENE SWITCHING — everything changes
+// ============================================================
+function setScene(n){
+  if(!started)return;
+  curScene=n;
+  const s=SC[n];
+
+  // BPM
+  Tone.Transport.bpm.rampTo(s.bpm,4);
+  Tone.Transport.swing=s.swing;
+  document.getElementById('bpm').value=s.bpm;
+
+  // Reshape pad synth timbre — THIS is what makes scenes sound different
+  reshapePad(s);
+
+  // Volumes
+  pad.volume.rampTo(s.padVol,2);
+  mel.volume.rampTo(s.melVol,2);
+  mel2.volume.rampTo(s.mel2Vol,2);
+  rev.wet.rampTo(s.revWet,2);
+
+  // Breathing
+  breathLFO.frequency.rampTo(s.breathRate,3);
+  breathLFO.max=s.breathAmt;
+
+  // Restart pad with new chord rate + play first chord NOW
+  startPadLoop();
+  triggerFirstChord(s);
+
+  // Kick
+  if(kickLoop){kickLoop.stop();kickLoop.dispose();kickLoop=null;}
+  if(s.kickInt){
+    kickLoop=new Tone.Loop(t=>{
+      try{kick.triggerAttackRelease('C1','8n',t,0.35);}catch(e){}
+    },s.kickInt);
+    kickLoop.start();
+  }
+
+  // Formless layers (scene 3)
+  if(s.gibberish){
+    // 1. Drone cluster — 3 detuned sines beating
+    gibDrone1.triggerAttack('A1','+0',0.4);
+    gibDrone2.triggerAttack('A1','+0.5',0.4); // +2Hz detune via slight timing
+    gibDrone3.triggerAttack('E2','+1',0.3);
+    gibDrone2.detune.rampTo(200,0.1); // 2Hz sharp = beating
+    gibDrone3.detune.rampTo(-300,0.1); // 3Hz flat
+
+    // 2. Formant voices — loud, shifting vowels
+    gibGain.gain.rampTo(0.6,2);
+    if(!gibLoop){
+      gibLoop=new Tone.Loop(t=>{
+        // 5 vowel formants (F1,F2,F3): a,e,i,o,u
+        const vowels=[[730,1090,2440],[270,2300,3000],[300,870,2250],[660,1720,2410],[520,1190,2390]];
+        const v=vowels[Math.floor(Math.random()*vowels.length)];
+        gibF1.frequency.rampTo(v[0],0.15);
+        gibF2.frequency.rampTo(v[1],0.15);
+        gibF3.frequency.rampTo(v[2],0.15);
+        // Randomly shift Q for more variation
+        gibF1.Q.rampTo(8+Math.random()*8,0.1);
+      },'4n');
+      gibLoop.start();
+    }
+
+    // 3. Reverse swells — notes that fade in from nothing
+    if(!gibSwellLoop){
+      const swellNotes=['A2','E3','C3','D3','G2'];
+      gibSwellLoop=new Tone.Loop(t=>{
+        const n=swellNotes[Math.floor(Math.random()*swellNotes.length)];
+        gibSwell.triggerAttackRelease(n,3,t,0.2+Math.random()*0.2);
+      },'2m');
+      gibSwellLoop.start();
+    }
+  }else{
+    // Kill all formless layers
+    gibGain.gain.rampTo(0,2);
+    try{gibDrone1.triggerRelease();gibDrone2.triggerRelease();gibDrone3.triggerRelease();}catch(e){}
+    if(gibLoop){gibLoop.stop();gibLoop.dispose();gibLoop=null;}
+    if(gibSwellLoop){gibSwellLoop.stop();gibSwellLoop.dispose();gibSwellLoop=null;}
+  }
+
+  // Plexus drums (scene 4 only) — CEING style
+  // plexusActive flag controls mouse→drum triggers
+  plexusActive=!!s.plexus;
+
+  // Reset melody
+  if(s.scale.length) mP=Math.min(mP,s.scale.length-1);
+
+  // UI
+  document.getElementById('scene-name').textContent=`#${n} ${s.name} — ${s.nameT}`;
+  const pct=s.energy*10;
+  document.getElementById('energy-fill').style.width=pct+'%';
+  document.getElementById('energy-fill').style.background=
+    s.energy>7?'#f44':s.energy>4?'#fa4':s.energy>2?'#48a':'#446';
+  document.querySelectorAll('.sb').forEach((el,i)=>el.classList.toggle('on',i===n));
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+document.getElementById('bpm').oninput=function(){
+  if(started)Tone.Transport.bpm.rampTo(+this.value,0.5);};
+document.getElementById('vol').oninput=function(){
+  if(started)Tone.Destination.volume.rampTo(Tone.gainToDb(this.value/100),0.3);};
+document.getElementById('echo').oninput=function(){
+  if(started)rev.wet.rampTo(this.value/100,0.5);};
+document.addEventListener('keydown',e=>{
+  const n=parseInt(e.key);if(n>=0&&n<=6)setScene(n);
+});
+// Mouse → CEING plexus drums in scene 4
+// Y position = drum type: bottom=kick, middle=snare, top=hihat
+// Velocity = volume
+document.addEventListener('mousemove',e=>{
+  prevMouseX=mouseX;prevMouseY=mouseY;
+  mouseX=e.clientX/innerWidth;mouseY=1-e.clientY/innerHeight;
+  mouseVel=Math.sqrt((mouseX-prevMouseX)**2+(mouseY-prevMouseY)**2);
+
+  if(!plexusActive||!started)return;
+  const now=performance.now();
+  if(now-lastPlxTime<50)return; // 50ms retrigger cooldown
+  if(mouseVel<0.008)return; // need movement to trigger
+
+  lastPlxTime=now;
+  const v=Math.min(mouseVel*12,1);
+  if(mouseY<0.33)plxKick(v);       // bottom third = kick
+  else if(mouseY>0.66)plxHiHat(v); // top third = hihat
+  else plxSnare(v);                  // middle = snare
+});
+
+// ============================================================
+// VISUALS — stars react to energy
+// ============================================================
+const stars=[];for(let i=0;i<200;i++)stars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.5+0.2,tw:Math.random()*0.015+0.003,a:Math.random()*6.28,br:0.2+Math.random()*0.4});
+
+function draw(){
+  cx.fillStyle='rgba(5,5,16,0.08)';cx.fillRect(0,0,W,H);
+  const e=SC[curScene].energy/10;
+  stars.forEach(s=>{
+    s.a+=s.tw*(1+e*2);
+    const br=Math.max(0,s.br+Math.sin(s.a)*(0.15+e*0.15));
+    cx.fillStyle=`rgba(${150+e*100},${180+e*50},255,${br})`;
+    cx.beginPath();cx.arc(s.x*W,s.y*H,s.r*(1+e*0.5),0,Math.PI*2);cx.fill();
+  });
+}
+function loop(){requestAnimationFrame(loop);draw();}
+
+// ============================================================
+// START
+// ============================================================
+document.addEventListener('click',async()=>{
+  if(started)return;
+  document.getElementById('info').textContent='Loading...';
+  await Tone.start();
+  await initAudio();
+  started=true;
+  startMusic();
+  setScene(0);
+  document.getElementById('info').textContent='Playing. Keys 0-6.';
+},{once:true});
+requestAnimationFrame(loop);
+</script>
+</body></html>

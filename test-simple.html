@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Simple Ambient Test</title>
+<script src="https://unpkg.com/tone@14"></script>
+<style>body{background:#050510;color:#fff;font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;gap:20px}
+button{padding:10px 30px;background:#223;border:1px solid #446;color:#aaf;font-size:14px;cursor:pointer;border-radius:4px}
+#status{color:#446;font-size:12px}
+</style>
+</head><body>
+<button onclick="start()">START</button>
+<div id="status">Click to start</div>
+<script>
+async function start(){
+  document.getElementById('status').textContent='Starting...';
+  await Tone.start();
+
+  // Simple reverb — wait for it
+  const rev=new Tone.Reverb(4);
+  rev.toDestination();
+  await rev.ready;
+
+  // One synth
+  const synth=new Tone.PolySynth(Tone.Synth,{
+    maxPolyphony:8,
+    options:{
+      oscillator:{type:'sine'},
+      envelope:{attack:1,decay:0.5,sustain:0.8,release:2}
+    }
+  });
+  synth.volume.value=-12;
+  synth.connect(rev);
+
+  // Melody synth
+  const mel=new Tone.Synth({
+    oscillator:{type:'triangle'},
+    envelope:{attack:0.01,decay:0.3,sustain:0.2,release:0.8}
+  });
+  mel.volume.value=-10;
+  mel.connect(rev);
+
+  const chords=[
+    ['C3','E3','G3','C4'],
+    ['A2','C3','E3','A3'],
+    ['F2','A2','C3','F3'],
+    ['G2','B2','D3','G3'],
+  ];
+  const notes=['C4','D4','E4','G4','A4','C5','D5','E5'];
+  let ci=0,ni=3,nd=1;
+
+  Tone.Transport.bpm.value=72;
+
+  // Chord every 2 bars
+  new Tone.Loop(t=>{
+    synth.releaseAll(t);
+    const ch=chords[ci%chords.length];
+    ch.forEach((n,i)=>synth.triggerAttack(n,t+i*0.03,0.3+Math.random()*0.2));
+    ci++;
+  },'2m').start(0);
+
+  // Melody every beat
+  new Tone.Loop(t=>{
+    const r=Math.random();
+    if(r<0.4)ni+=nd;
+    else if(r<0.6){nd*=-1;ni+=nd;}
+    else if(r<0.8)ni+=nd*2;
+    else return; // rest
+    if(ni>=notes.length){ni=notes.length-2;nd=-1;}
+    if(ni<0){ni=1;nd=1;}
+    const durs=['8n','4n','4n.','2n'];
+    mel.triggerAttackRelease(notes[ni],durs[Math.floor(Math.random()*durs.length)],t,0.15+Math.random()*0.4);
+  },'4n').start(0);
+
+  Tone.Transport.start();
+  document.getElementById('status').textContent='Playing — should not stop. If it stops, the problem is elsewhere.';
+}
+</script>
+</body></html>
